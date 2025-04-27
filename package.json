@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "axios": "^1.9.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.5.2"
+  },
+  "name": "beating",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/CinthyaJG9/beating.git",
+  "author": "CinthyaJG9 <cjimenezg2000@alumno.ipn.mx>",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^6.3.3"
+  }
+}
