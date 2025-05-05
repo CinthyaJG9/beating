@@ -1,10 +1,5 @@
-import {
-    NavigationMenu,
-    NavigationMenuItem,
-    NavigationMenuLink,
-    NavigationMenuList,
-  } from "@/components/ui/navigation-menu";
-  import { Button } from "@/components/ui/button";
+import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "./../components/ui/navigation-menu";
+  import { Button } from "./../components/ui/button";
   import React from "react";
   
   export default function Navbar() {
