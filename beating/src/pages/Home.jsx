@@ -1,56 +1,99 @@
 // src/pages/Home.jsx
 import React from "react";
-import Navbar from "../components/navbar";
-import { Button } from "./../components/ui/button";
+import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
+import { useNavigate } from "react-router-dom";
+
 
 export default function Home() {
+  const navigate = useNavigate();
+
   return (
     <main className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)]">
       <div className="container mx-auto px-4 py-6">
-        <Navbar />
+        {/* Header con Logo personalizado */}
+        <header className="flex justify-between items-center mb-12">
+          {/* Texto 'Beating' con gradiente */}
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            Beating
+          </h1>
 
+          {/* Menú de navegación */}
+          <nav className="flex items-center gap-8">
+            <a href="#" className="text-purple-300 hover:text-white">Inicio</a>
+            <a href="#" className="text-white font-medium">Canciones</a>
+            <a href="#" className="text-purple-300 hover:text-white">Álbumes</a>
+            <Button variant="outline" className="border-white text-white"  
+            onClick={() => navigate("/login")}>
+              Iniciar Sesión
+             
+            </Button>
+          </nav>
+        </header>
+
+        {/* Contenido principal */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-          {/* Left Side Content */}
+          {/* Texto y botón */}
           <div className="max-w-md">
             <h2 className="text-5xl font-bold text-white mb-2">
-              *Comentario Bonito De Slogan*
+              Donde tus emociones <span className="text-purple-300">se convierten</span> en música
             </h2>
             <p className="text-sm text-gray-400 mb-8">
-              *OTRO COMENTARIO CHULO*
+              Analizamos tus sentimientos en reseñas musicales para crear playlists que realmente conecten contigo.
             </p>
-
             <Button className="bg-gradient-to-r from-blue-400 to-purple-400 hover:opacity-90 text-white px-10 py-6 text-xl rounded-xl">
               Explorar
             </Button>
           </div>
 
-          {/* Right Side Cards */}
+          {/* Logo visual en mockup + tarjetas */}
           <div className="relative w-72 h-80">
             <div className="absolute right-0 top-0 rotate-6 z-10">
               <Card className="w-64 h-72 bg-gradient-to-b from-purple-400 to-blue-400 rounded-xl shadow-xl">
                 <CardContent className="flex flex-col items-center justify-center h-full p-6">
-                  <div className="w-24 h-24 rounded-full bg-green-500 flex items-center justify-center mb-4">
-                    <div className="w-16 h-10 flex flex-col gap-1 items-center">
-                      <div className="w-full h-1 bg-white rounded-full"></div>
-                      <div className="w-full h-1 bg-white rounded-full"></div>
-                      <div className="w-full h-1 bg-white rounded-full"></div>
-                    </div>
+                  <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center mb-4">
+                    {/* Nuevo logo musical estilo "cable + bocina" */}
+                    <svg
+  width="80"
+  height="40"
+  viewBox="0 0 120 40"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <linearGradient id="waveGradient" x1="0" y1="0" x2="120" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#9333ea" />
+      <stop offset="100%" stopColor="#ec4899" />
+    </linearGradient>
+  </defs>
+  <path
+    d="M0 20 Q 10 10, 20 20 Q 30 30, 40 20 Q 50 10, 60 20 Q 70 30, 80 20 Q 90 10, 100 20"
+    stroke="url(#waveGradient)"
+    strokeWidth="4"
+    fill="none"
+    strokeLinecap="round"
+  />
+  <rect x="102" y="17" width="10" height="6" rx="1" fill="#ec4899" />
+  <line x1="112" y1="18" x2="116" y2="18" stroke="#ec4899" strokeWidth="2" />
+  <line x1="112" y1="22" x2="116" y2="22" stroke="#ec4899" strokeWidth="2" />
+</svg>
+
                   </div>
                   <div className="text-center text-white">
-                    <p className="text-xs">*Comentario*</p>
-                    <p className="font-bold">Comentario</p>
+                    <div className="text-xs text-white/70">Mood Detectado:</div>
+                    <div className="text-sm font-medium text-white">Melancolía suave 🌧️</div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Card secundaria */}
             <div className="absolute right-4 top-4 -rotate-3 z-0">
               <Card className="w-64 h-72 bg-gradient-to-b from-purple-300 to-blue-300 rounded-xl shadow-lg opacity-70">
                 <CardContent className="flex flex-col items-center justify-center h-full p-6">
                   <div className="text-center text-white">
-                    <p className="text-xs">*Comentario*</p>
-                    <p className="font-bold">Comentario</p>
+                    <div className="text-xs text-white/70">Sugerencia de playlist:</div>
+                    <div className="text-sm font-medium text-white">"Reflexiones nocturnas"</div>
                   </div>
                 </CardContent>
               </Card>

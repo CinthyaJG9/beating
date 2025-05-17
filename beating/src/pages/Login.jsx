@@ -4,31 +4,36 @@ import { Input } from "../components/ui/input";
 import { X } from "lucide-react";
 import React, { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom"; // Para redirigir
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      alert("Por favor, completa todos los campos.");
-      return;
+const handleLogin = async () => {
+  try {
+    const response = await axios.post('http://localhost:5000/login', {
+      email,
+      password
+    });
+
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user_id', response.data.user_id);
+      localStorage.setItem('username', response.data.username);
+      navigate('/inicio');
     }
+  } catch (error) {
+    if (error.response) {
+      setError(error.response.data.error || 'Error en las credenciales');
+    } else {
+      setError('No se pudo conectar al servidor');
+    }
+  }
+};
 
-    axios
-      .post("http://localhost:5000/login", {
-        email,
-        password,
-      })
-      .then((res) => {
-        const token = res.data.token;
-        localStorage.setItem("token", token);
-        alert("Login exitoso");
-      })
-      .catch((err) => {
-        alert("Correo o contraseña incorrectos");
-      });
-  };
 
   const backgroundImage =
     "https://videos.openai.com/vg-assets/assets%2Ftask_01jth9bnj3ff1s2213p9wmbmr3%2F1746484503_img_1.webp";
@@ -48,6 +53,15 @@ export default function Login() {
           </DialogClose>
 
           <div className="space-y-6">
+            <h2 className="text-2xl text-white font-semibold text-center">
+              Iniciar Sesión
+            </h2>
+
+            {/* 🔴 Muestra errores aquí */}
+            {error && (
+              <div className="text-red-400 text-sm text-center">{error}</div>
+            )}
+
             <div className="space-y-2">
               <label htmlFor="email" className="text-white block">
                 Correo Electrónico:
@@ -81,13 +95,15 @@ export default function Login() {
               Iniciar Sesión
             </Button>
 
-            <div className="text-center text-white pt-2">
+            <div className="text-center text-white pt-2 text-sm">
               ¿Aún no tienes cuenta?
             </div>
 
+            {/* 🔁 Redirige a una ruta de registro */}
             <Button
               variant="outline"
               className="w-full border-purple-600 text-purple-600 hover:bg-purple-600/10 h-12"
+              onClick={() => navigate("/register")}
             >
               Registrar
             </Button>
