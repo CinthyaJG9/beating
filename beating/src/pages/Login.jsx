@@ -10,6 +10,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [open, setOpen] = useState(true);
   const navigate = useNavigate();
 
 const handleLogin = async () => {
@@ -46,7 +47,7 @@ const handleLogin = async () => {
         src={backgroundImage}
       />
 
-      <Dialog defaultOpen={true}>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-black border border-gray-800 p-6 w-[480px] max-w-[90vw] rounded-lg">
           <DialogClose className="absolute right-4 top-4 text-gray-400">
             <X className="h-4 w-4" />
@@ -103,7 +104,10 @@ const handleLogin = async () => {
             <Button
               variant="outline"
               className="w-full border-purple-600 text-purple-600 hover:bg-purple-600/10 h-12"
-              onClick={() => navigate("/register")}
+              onClick={() => {
+                setOpen(false);         
+                navigate("/register"); 
+              }}
             >
               Registrar
             </Button>
