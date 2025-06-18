@@ -6,6 +6,8 @@ export default function Resenas() {
   const [contenido, setContenido] = useState("");
   const [tipo, setTipo] = useState(""); 
   const [mensaje, setMensaje] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [artista, setArtista] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,8 +19,10 @@ export default function Resenas() {
 
     try {
       const res = await axios.post("http://localhost:5000/resenas", {
-        contenido,
+        nombre,
+        artista,
         tipo,
+        contenido
       });
 
       setMensaje("Hemos recibido tu reseña, gracias por colaborar con Beating!");
@@ -26,6 +30,7 @@ export default function Resenas() {
       setTipo("");
     } catch (error) {
       console.error(error);
+      console.log(error.response?.data);
       setMensaje("Ups! Parece que no nos ha llegado tu reseña, intenta de nuevo!");
     }
   };
@@ -36,6 +41,21 @@ export default function Resenas() {
         onSubmit={handleSubmit}
         className="bg-gray-900 p-8 rounded-lg w-full max-w-lg space-y-4"
       >
+        <input
+          type="text"
+          placeholder="Nombre del artista"
+          value={artista}
+          onChange={(e) => setArtista(e.target.value)}
+          className="w-full p-4 bg-black border border-gray-700 text-white rounded"
+        />
+
+        <input
+          type="text"
+          placeholder="Nombre de la canción/álbum"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+           className="w-full p-4 bg-black border border-gray-700 text-white rounded"
+        />
         <h2 className="text-2xl font-bold text-center">Escribe tu reseña</h2>
 
         <textarea
