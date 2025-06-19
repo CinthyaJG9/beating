@@ -1,5 +1,7 @@
 import { Button } from "./../components/ui/button";
+import { Dialog, DialogClose, DialogContent } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
+import { X } from "lucide-react";
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +14,7 @@ export default function Register() {
   });
 
   const [mensaje, setMensaje] = useState("");
+  const [open, setOpen] = useState(true);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -24,7 +27,7 @@ export default function Register() {
     try {
       const res = await axios.post("http://localhost:5000/register", form);
       setMensaje("Registro exitoso, comienza a navegar por Beating!. ID: " + res.data.user_id);
-      setTimeout(() => navigate("/login"), 2000);
+      setTimeout(() => navigate("/resenas"), 2000);
     } catch (err) {
       if (err.response) {
         setMensaje("Error: " + err.response.data.error);
@@ -45,58 +48,65 @@ export default function Register() {
         src={backgroundImage}
       />
 
-      <div className="relative z-10 flex items-center justify-center h-full">
-        <form
-          onSubmit={handleSubmit}
-          className="bg-black border border-gray-800 p-8 w-[480px] max-w-[90vw] rounded-lg space-y-4"
-        >
-          <h2 className="text-2xl text-white font-semibold text-center">
-            Registro de Usuario
-          </h2>
-
-          {mensaje && <p className="text-center text-purple-400">{mensaje}</p>}
-
-          <div>
-            <label className="text-white block mb-1">Nombre de Usuario</label>
-            <Input
-              type="text"
-              name="nombre_usuario"
-              value={form.nombre_usuario}
-              onChange={handleChange}
-              className="bg-black border-gray-700 text-white h-12"
-            />
-          </div>
-
-          <div>
-            <label className="text-white block mb-1">Correo Electrónico</label>
-            <Input
-              type="email"
-              name="correo"
-              value={form.correo}
-              onChange={handleChange}
-              className="bg-black border-gray-700 text-white h-12"
-            />
-          </div>
-
-          <div>
-            <label className="text-white block mb-1">Contraseña</label>
-            <Input
-              type="password"
-              name="contrasena"
-              value={form.contrasena}
-              onChange={handleChange}
-              className="bg-black border-gray-700 text-white h-12"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white h-12"
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="bg-black border border-gray-800 p-8 w-[480px] max-w-[90vw] rounded-lg">
+          <DialogClose 
+            className="absolute right-4 top-4 text-gray-400"
+            onClick={() => navigate('/')}  // Agrega esta línea
           >
-            Registrarse
-          </Button>
-        </form>
-      </div>
+            <X className="h-4 w-4" />
+          </DialogClose>
+
+          <div className="space-y-4">
+            <h2 className="text-2xl text-white font-semibold text-center">
+              Registro de Usuario
+            </h2>
+
+            {mensaje && <p className="text-center text-purple-400">{mensaje}</p>}
+
+            <div className="space-y-2">
+              <label className="text-white block">Nombre de Usuario</label>
+              <Input
+                type="text"
+                name="nombre_usuario"
+                value={form.nombre_usuario}
+                onChange={handleChange}
+                className="bg-black border-gray-700 text-white h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-white block">Correo Electrónico</label>
+              <Input
+                type="email"
+                name="correo"
+                value={form.correo}
+                onChange={handleChange}
+                className="bg-black border-gray-700 text-white h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-white block">Contraseña</label>
+              <Input
+                type="password"
+                name="contrasena"
+                value={form.contrasena}
+                onChange={handleChange}
+                className="bg-black border-gray-700 text-white h-12"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              onClick={handleSubmit}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white h-12"
+            >
+              Registrarse
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

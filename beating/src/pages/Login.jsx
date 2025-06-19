@@ -24,7 +24,7 @@ const handleLogin = async () => {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user_id', response.data.user_id);
       localStorage.setItem('username', response.data.username);
-      navigate('/inicio');
+      navigate('/resenas');
     }
   } catch (error) {
     if (error.response) {
@@ -48,11 +48,13 @@ const handleLogin = async () => {
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-black border border-gray-800 p-6 w-[480px] max-w-[90vw] rounded-lg">
-          <DialogClose className="absolute right-4 top-4 text-gray-400">
-            <X className="h-4 w-4" />
-          </DialogClose>
-
+  <DialogContent className="bg-black border border-gray-800 p-6 w-[480px] max-w-[90vw] rounded-lg">
+    <DialogClose 
+      className="absolute right-4 top-4 text-gray-400"
+      onClick={() => navigate('/')}  // Agrega esta línea
+    >
+      <X className="h-4 w-4" />
+    </DialogClose>
           <div className="space-y-6">
             <h2 className="text-2xl text-white font-semibold text-center">
               Iniciar Sesión

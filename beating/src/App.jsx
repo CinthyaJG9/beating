@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register"; 
 import Resenas from "./pages/Resenas";
+import AnalisisResenas from "./pages/AnalisisResenas";
 
 export default function App() {
   return (
@@ -13,6 +14,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/resenas" element={<Resenas />} />
+        <Route path="/analisis" element={<AnalisisResenas />} />
+
       </Routes>
     </Router>
   );
