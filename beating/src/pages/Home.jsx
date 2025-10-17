@@ -42,11 +42,13 @@ export default function Home() {
               Analizamos tus sentimientos en reseñas musicales para crear playlists que realmente conecten contigo.
             </p>
             <div className="flex gap-4">
-            <Button
-              className="bg-gradient-to-r from-blue-400 to-purple-400 hover:opacity-90 text-white px-10 py-6 text-xl rounded-xl"
-            >
-              Explorar
-            </Button>
+<Button
+  onClick={() => navigate("/explora")}
+  className="bg-gradient-to-r from-blue-400 to-purple-400 hover:opacity-90 text-white px-10 py-6 text-xl rounded-xl"
+>
+  Explorar
+</Button>
+
 
             <Button
               onClick={() => navigate("/resenas")}

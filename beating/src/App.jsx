@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register"; 
 import Resenas from "./pages/Resenas";
 import AnalisisResenas from "./pages/AnalisisResenas";
+import Explora from "./pages/Explora";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/resenas" element={<Resenas />} />
         <Route path="/analisis" element={<AnalisisResenas />} />
+        <Route path="/explora" element={<Explora />} />
 
       </Routes>
     </Router>
