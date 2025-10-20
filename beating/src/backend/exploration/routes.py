@@ -45,10 +45,11 @@ def init_exploration_routes(app):
                     'title': row[1],
                     'artist': row[2],
                     'spotify_uri': row[3],
-                    'rating': float(row[4]),
+                    'rating': round(float(row[4]) * 5, 1),  # Escalado de 0-1 a 0-5 estrellas
                     'total_reviews': row[5],
                     'cover_url': None
                 }
+
                 
                 # Intentar obtener imagen de Spotify
                 if row[3]:  # Si tiene spotify_uri
@@ -74,8 +75,8 @@ def init_exploration_routes(app):
                     cancion['review_type'] = 'real'
                 else:
                     # Fallback a reseña generica si no hay reseñas reales
-                    cancion['review'] = f"'{cancion['title']}' ha sido valorada positivamente por la comunidad con una calificación de {cancion['rating']}/1.0."
-                    cancion['review_highlight'] = f"★ Calificación promedio: {cancion['rating']}/1.0"
+                    cancion['review'] = f"'{cancion['title']}' ha sido valorada positivamente por la comunidad con una calificación de {cancion['rating']}/5.0."
+                    cancion['review_highlight'] = f"★ Calificación promedio: {cancion['rating']}/5.0"
                     cancion['review_type'] = 'generic'
                 
                 canciones_mejoradas.append(cancion)
@@ -138,10 +139,11 @@ def init_exploration_routes(app):
                     'id': row[0],
                     'title': row[1],
                     'artist': row[2],
-                    'rating': float(row[3]),
+                    'rating': round(float(row[3]) * 5, 1),
                     'total_reviews': row[4],
                     'cover_url': None
                 }
+
                 
                 # Intentar obtener imagen de Spotify buscando el álbum
                 try:
@@ -167,8 +169,8 @@ def init_exploration_routes(app):
                     album['review_type'] = 'real'
                 else:
                     # Fallback a reseña generica si no hay reseñas reales
-                    album['review'] = f"El álbum '{album['title']}' ha recibido críticas positivas con una calificación promedio de {album['rating']}/1.0."
-                    album['review_highlight'] = f"★ Calificación: {album['rating']}/1.0"
+                    album['review'] = f"El álbum '{album['title']}' ha recibido críticas positivas con una calificación promedio de {album['rating']}/5.0."
+                    album['review_highlight'] = f"★ Calificación: {album['rating']}/5.0"
                     album['review_type'] = 'generic'
                 
                 albumes_mejorados.append(album)
@@ -256,7 +258,7 @@ def formatear_resena_real(reseña, item, tipo):
     if len(texto) > 150:
         texto = texto[:147] + "..."
     
-    highlight = f"★ {reseña['puntuacion']:.1f}/1.0 - Reseña {sentimiento}"
+    highlight = f"★ {reseña['puntuacion'] * 5:.1f}/5.0 - Reseña {sentimiento}"
     
     return {
         'review': texto,

@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import Resenas from "./pages/Resenas";
 import AnalisisResenas from "./pages/AnalisisResenas";
 import Explora from "./pages/Explora";
+import AuthRequired from "./pages/AuthRequired";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/resenas" element={<Resenas />} />
         <Route path="/analisis" element={<AnalisisResenas />} />
         <Route path="/explora" element={<Explora />} />
+        <Route path="/auth-required" element={<AuthRequired />} />
 
       </Routes>
     </Router>
