@@ -1,43 +1,59 @@
 from flask import request, jsonify
-from database.connection import db  # ← Importación correcta
-from spotify.client import spotify_client  # ← Importación correcta
+from database.connection import db
+from spotify.client import spotify_client
 
 def init_exploration_routes(app):
     
     @app.route('/api/top_songs', methods=['GET'])
     def top_songs():
-        conn = None  # ← Inicializar conn
+        conn = None
         try:
-            # CORREGIDO: Usar db.get_connection()
             conn = db.get_connection()
             if not conn:
                 return jsonify({"error": "Error de conexión a la base de datos"}), 500
                 
             cur = conn.cursor()
-            query = """
+            
+            # Obtener parámetros de filtro
+            sentiment_filter = request.args.get('sentiment', 'all')
+            limit = int(request.args.get('limit', 10))
+            
+            # Query base
+            base_query = """
                 SELECT 
                     c.id_cancion as id,
                     c.titulo as title,
                     c.artista as artist,
                     c.spotify_uri,
                     ROUND(AVG(s.puntuacion), 3) AS rating,
-                    COUNT(s.id_sentimiento) AS total_reviews
+                    COUNT(s.id_sentimiento) AS total_reviews,
+                    s.etiqueta as sentiment
                 FROM canciones c
                 JOIN resenas r ON r.id_cancion = c.id_cancion
                 JOIN sentimientos s ON s.id_resena = r.id_resena
                 WHERE s.puntuacion IS NOT NULL
-                GROUP BY c.id_cancion, c.titulo, c.artista, c.spotify_uri
+            """
+            
+            # Aplicar filtro de sentimiento
+            if sentiment_filter != 'all':
+                sentiment_map = {'positive': 'positivo', 'negative': 'negativo', 'neutral': 'neutral'}
+                base_query += f" AND s.etiqueta = '{sentiment_map.get(sentiment_filter, 'positivo')}'"
+            
+            # Completar query
+            base_query += """
+                GROUP BY c.id_cancion, c.titulo, c.artista, c.spotify_uri, s.etiqueta
                 HAVING COUNT(s.id_sentimiento) >= 1
                 ORDER BY rating DESC, total_reviews DESC
-                LIMIT 10;
+                LIMIT %s;
             """
-            cur.execute(query)
+            
+            cur.execute(base_query, (limit,))
             resultados = cur.fetchall()
 
             if not resultados:
                 return jsonify([]), 200
 
-            # Convertir a lista de diccionarios y obtener imágenes de Spotify
+            # Convertir a lista de diccionarios
             canciones_mejoradas = []
             for row in resultados:
                 cancion = {
@@ -45,24 +61,23 @@ def init_exploration_routes(app):
                     'title': row[1],
                     'artist': row[2],
                     'spotify_uri': row[3],
-                    'rating': round(float(row[4]) * 5, 1),  # Escalado de 0-1 a 0-5 estrellas
+                    'rating': round(float(row[4]) * 5, 1),  # Escalado a 0-5
                     'total_reviews': row[5],
+                    'review_sentiment': row[6],  # Sentimiento real
                     'cover_url': None
                 }
-
                 
-                # Intentar obtener imagen de Spotify
-                if row[3]:  # Si tiene spotify_uri
+                # Obtener imagen de Spotify
+                if row[3]:
                     try:
-                        track_id = row[3].split(':')[-1]  # Extraer ID de la URI
-                        # CORREGIDO: Usar spotify_client.sp_search
+                        track_id = row[3].split(':')[-1]
                         track_info = spotify_client.sp_search.track(track_id)
                         if track_info and track_info['album']['images']:
                             cancion['cover_url'] = track_info['album']['images'][0]['url']
                     except Exception as e:
                         print(f"Error obteniendo imagen para {row[1]}: {e}")
                 
-                # Obtener reseña real (priorizar positiva, luego reciente)
+                # Obtener reseña real
                 reseña_real = obtener_mejor_resena_real(conn, cancion['id'], 'cancion', 'positiva')
                 if not reseña_real:
                     reseña_real = obtener_mejor_resena_real(conn, cancion['id'], 'cancion', 'reciente')
@@ -74,10 +89,10 @@ def init_exploration_routes(app):
                     cancion['review_sentiment'] = reseña_formateada['sentimiento']
                     cancion['review_type'] = 'real'
                 else:
-                    # Fallback a reseña generica si no hay reseñas reales
                     cancion['review'] = f"'{cancion['title']}' ha sido valorada positivamente por la comunidad con una calificación de {cancion['rating']}/5.0."
                     cancion['review_highlight'] = f"★ Calificación promedio: {cancion['rating']}/5.0"
                     cancion['review_type'] = 'generic'
+                    cancion['review_sentiment'] = 'positivo'  # Default para reseñas genéricas
                 
                 canciones_mejoradas.append(cancion)
 
@@ -89,20 +104,23 @@ def init_exploration_routes(app):
         finally:
             if cur:
                 cur.close()
-            # CORREGIDO: Usar db.close_connection()
             if conn:
                 db.close_connection(conn)
 
     @app.route('/api/top_albums', methods=['GET'])
     def top_albums():
-        conn = None  # ← Inicializar conn
+        conn = None
         try:
-            # CORREGIDO: Usar db.get_connection()
             conn = db.get_connection()
             if not conn:
                 return jsonify({"error": "Error de conexión a la base de datos"}), 500
                 
             cur = conn.cursor()
+            
+            # Obtener parámetros de filtro
+            sentiment_filter = request.args.get('sentiment', 'all')
+            limit = int(request.args.get('limit', 10))
+            
             # Primero verificar si hay reseñas de álbumes
             cur.execute("SELECT COUNT(*) FROM resenas WHERE id_album IS NOT NULL")
             count_albums = cur.fetchone()[0]
@@ -110,23 +128,35 @@ def init_exploration_routes(app):
             if count_albums == 0:
                 return jsonify([]), 200
 
-            query = """
+            # Query base para álbumes
+            base_query = """
                 SELECT 
                     a.id_album as id,
                     a.titulo as title,
                     a.artista as artist,
                     ROUND(AVG(s.puntuacion), 3) AS rating,
-                    COUNT(s.id_sentimiento) AS total_reviews
+                    COUNT(s.id_sentimiento) AS total_reviews,
+                    s.etiqueta as sentiment
                 FROM resenas r
                 JOIN albumes a ON a.id_album = r.id_album
                 JOIN sentimientos s ON s.id_resena = r.id_resena
                 WHERE r.id_album IS NOT NULL AND s.puntuacion IS NOT NULL
-                GROUP BY a.id_album, a.titulo, a.artista
+            """
+            
+            # Aplicar filtro de sentimiento
+            if sentiment_filter != 'all':
+                sentiment_map = {'positive': 'positivo', 'negative': 'negativo', 'neutral': 'neutral'}
+                base_query += f" AND s.etiqueta = '{sentiment_map.get(sentiment_filter, 'positivo')}'"
+            
+            # Completar query
+            base_query += """
+                GROUP BY a.id_album, a.titulo, a.artista, s.etiqueta
                 HAVING COUNT(s.id_sentimiento) >= 1
                 ORDER BY rating DESC, total_reviews DESC
-                LIMIT 10;
+                LIMIT %s;
             """
-            cur.execute(query)
+            
+            cur.execute(base_query, (limit,))
             resultados = cur.fetchall()
 
             if not resultados:
@@ -141,13 +171,12 @@ def init_exploration_routes(app):
                     'artist': row[2],
                     'rating': round(float(row[3]) * 5, 1),
                     'total_reviews': row[4],
+                    'review_sentiment': row[5],  # Sentimiento real
                     'cover_url': None
                 }
-
                 
-                # Intentar obtener imagen de Spotify buscando el álbum
+                # Obtener imagen de Spotify
                 try:
-                    # CORREGIDO: Usar spotify_client.sp_search
                     results = spotify_client.sp_search.search(q=f"{row[1]} {row[2]}", type='album', limit=1)
                     if results['albums']['items']:
                         album_info = results['albums']['items'][0]
@@ -156,7 +185,7 @@ def init_exploration_routes(app):
                 except Exception as e:
                     print(f"Error obteniendo imagen para álbum {row[1]}: {e}")
                 
-                # Obtener reseña real (priorizar positiva, luego reciente)
+                # Obtener reseña real
                 reseña_real = obtener_mejor_resena_real(conn, album['id'], 'album', 'positiva')
                 if not reseña_real:
                     reseña_real = obtener_mejor_resena_real(conn, album['id'], 'album', 'reciente')
@@ -168,10 +197,10 @@ def init_exploration_routes(app):
                     album['review_sentiment'] = reseña_formateada['sentimiento']
                     album['review_type'] = 'real'
                 else:
-                    # Fallback a reseña generica si no hay reseñas reales
                     album['review'] = f"El álbum '{album['title']}' ha recibido críticas positivas con una calificación promedio de {album['rating']}/5.0."
                     album['review_highlight'] = f"★ Calificación: {album['rating']}/5.0"
                     album['review_type'] = 'generic'
+                    album['review_sentiment'] = 'positivo'  # Default para reseñas genéricas
                 
                 albumes_mejorados.append(album)
 
@@ -183,9 +212,9 @@ def init_exploration_routes(app):
         finally:
             if cur:
                 cur.close()
-            # CORREGIDO: Usar db.close_connection()
             if conn:
                 db.close_connection(conn)
+
 
 # Añadir las funciones auxiliares que faltan
 def obtener_mejor_resena_real(conn, item_id, tipo, criterio='positiva'):

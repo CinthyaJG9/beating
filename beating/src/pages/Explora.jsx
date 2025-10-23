@@ -5,13 +5,15 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 
 export default function Explora() {
-  const [songs, setSongs] = useState([]);
-  const [albums, setAlbums] = useState([]);
-  const [filteredSongs, setFilteredSongs] = useState([]);
-  const [filteredAlbums, setFilteredAlbums] = useState([]);
+  const [positiveSongs, setPositiveSongs] = useState([]);
+  const [negativeSongs, setNegativeSongs] = useState([]);
+  const [neutralSongs, setNeutralSongs] = useState([]);
+  const [positiveAlbums, setPositiveAlbums] = useState([]);
+  const [negativeAlbums, setNegativeAlbums] = useState([]);
+  const [neutralAlbums, setNeutralAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'positive', 'negative', 'neutral'
+  const [activeFilter, setActiveFilter] = useState('positive'); // Por defecto mostrar positivas
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,18 +22,29 @@ export default function Explora() {
         setLoading(true);
         setError(null);
         
-        const [songsResponse, albumsResponse] = await Promise.all([
-          axios.get("http://localhost:5000/api/top_songs"),
-          axios.get("http://localhost:5000/api/top_albums")
+        // Hacer peticiones separadas para cada sentimiento (10 de cada)
+        const [
+          positiveSongsRes, 
+          negativeSongsRes, 
+          neutralSongsRes,
+          positiveAlbumsRes,
+          negativeAlbumsRes, 
+          neutralAlbumsRes
+        ] = await Promise.all([
+          axios.get("http://localhost:5000/api/top_songs?sentiment=positive&limit=10"),
+          axios.get("http://localhost:5000/api/top_songs?sentiment=negative&limit=10"),
+          axios.get("http://localhost:5000/api/top_songs?sentiment=neutral&limit=10"),
+          axios.get("http://localhost:5000/api/top_albums?sentiment=positive&limit=10"),
+          axios.get("http://localhost:5000/api/top_albums?sentiment=negative&limit=10"),
+          axios.get("http://localhost:5000/api/top_albums?sentiment=neutral&limit=10")
         ]);
         
-        const songsData = (songsResponse.data || []).slice(0, 10); // Limitar a top 10
-        const albumsData = (albumsResponse.data || []).slice(0, 10); // Limitar a top 10
-        
-        setSongs(songsData);
-        setAlbums(albumsData);
-        setFilteredSongs(songsData);
-        setFilteredAlbums(albumsData);
+        setPositiveSongs(positiveSongsRes.data || []);
+        setNegativeSongs(negativeSongsRes.data || []);
+        setNeutralSongs(neutralSongsRes.data || []);
+        setPositiveAlbums(positiveAlbumsRes.data || []);
+        setNegativeAlbums(negativeAlbumsRes.data || []);
+        setNeutralAlbums(neutralAlbumsRes.data || []);
         
       } catch (err) {
         console.error("Error al cargar datos:", err);
@@ -44,34 +57,29 @@ export default function Explora() {
     fetchData();
   }, []);
 
-  // Filtrar por sentimiento
-  useEffect(() => {
-    if (activeFilter === 'all') {
-      setFilteredSongs(songs);
-      setFilteredAlbums(albums);
-    } else {
-      const sentimentMap = {
-        'positive': 'positivo',
-        'negative': 'negativo',
-        'neutral': 'neutral'
-      };
-      
-      const targetSentiment = sentimentMap[activeFilter];
-      
-      setFilteredSongs(songs.filter(song => 
-        song.review_sentiment === targetSentiment
-      ));
-      setFilteredAlbums(albums.filter(album => 
-        album.review_sentiment === targetSentiment
-      ));
+  // Obtener datos actuales según el filtro activo
+  const getCurrentSongs = () => {
+    switch(activeFilter) {
+      case 'positive': return positiveSongs;
+      case 'negative': return negativeSongs;
+      case 'neutral': return neutralSongs;
+      default: return positiveSongs;
     }
-  }, [activeFilter, songs, albums]);
+  };
+
+  const getCurrentAlbums = () => {
+    switch(activeFilter) {
+      case 'positive': return positiveAlbums;
+      case 'negative': return negativeAlbums;
+      case 'neutral': return neutralAlbums;
+      default: return positiveAlbums;
+    }
+  };
 
   const handleItemClick = (type, item) => {
     console.log(`${type} clickeado:`, item);
   };
 
-  // MEJORADO: Colores más legibles y con mejor contraste
   const getReviewStyles = (reviewType, sentiment) => {
     const baseStyles = "rounded-lg p-3 border-l-4 font-medium ";
     
@@ -88,7 +96,6 @@ export default function Explora() {
     return baseStyles + "bg-purple-900/40 border-purple-500 text-purple-50 shadow-lg";
   };
 
-  // MEJORADO: Iconos y colores más consistentes
   const getReviewMeta = (reviewType, sentiment) => {
     if (reviewType === 'real') {
       switch(sentiment) {
@@ -110,7 +117,7 @@ export default function Explora() {
           return { 
             icon: '📝', 
             color: 'text-blue-200',
-            badge: 'bg-blue-800/60 text-blue-100 border border-blue-600',
+            badge: 'bg-blue-800/60 text-blue-100 border-blue-600',
             label: 'Neutral'
           };
       }
@@ -123,25 +130,17 @@ export default function Explora() {
     };
   };
 
-  // Estadísticas para mostrar en los filtros
-  const getStats = () => {
-    const positiveSongs = songs.filter(s => s.review_sentiment === 'positivo').length;
-    const negativeSongs = songs.filter(s => s.review_sentiment === 'negativo').length;
-    const neutralSongs = songs.filter(s => s.review_sentiment === 'neutral').length;
-    
-    const positiveAlbums = albums.filter(a => a.review_sentiment === 'positivo').length;
-    const negativeAlbums = albums.filter(a => a.review_sentiment === 'negativo').length;
-    const neutralAlbums = albums.filter(a => a.review_sentiment === 'neutral').length;
-
+  const getFilterStats = () => {
     return {
-      positive: positiveSongs + positiveAlbums,
-      negative: negativeSongs + negativeAlbums,
-      neutral: neutralSongs + neutralAlbums,
-      total: songs.length + albums.length
+      positive: positiveSongs.length + positiveAlbums.length,
+      negative: negativeSongs.length + negativeAlbums.length,
+      neutral: neutralSongs.length + neutralAlbums.length
     };
   };
 
-  const stats = getStats();
+  const stats = getFilterStats();
+  const currentSongs = getCurrentSongs();
+  const currentAlbums = getCurrentAlbums();
 
   if (loading) {
     return (
@@ -168,7 +167,7 @@ export default function Explora() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#0e0e10] to-[#020107] text-white relative overflow-hidden">
-      {/* Elemento decorativo */}
+      {/* Fondo decorativo */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-0 w-[50%] h-[50%] bg-gradient-to-br from-purple-900/20 to-transparent rounded-full blur-3xl"></div>
       </div>
@@ -180,15 +179,16 @@ export default function Explora() {
               <h1 className="text-8xl font-extrabold bg-gradient-to-r from-[#ae67fa] to-[#f49867] bg-clip-text text-transparent tracking-tight">
                 Beating
               </h1>
-              <p className="text-gray-400 mt-4 text-xl">Descubre la música mejor valorada por la comunidad</p>
+              <p className="text-gray-400 mt-4 text-xl">
+                Explora la música mejor valorada por la comunidad
+              </p>
             </a>
           </div>
           
           <div className="flex items-center gap-8">
             <nav className="flex gap-12 text-2xl font-bold">
               <a href="/" className="text-[#7b2eb0] hover:text-purple-400 transition-colors">Inicio</a>
-              <a href="#" className="text-[#7b2eb0] hover:text-purple-400 transition-colors">Canciones</a>
-              <a href="#" className="text-[#7b2eb0] hover:text-purple-400 transition-colors">Discos / Albums</a>
+              <a href="/explora" className="text-[#7b2eb0] hover:text-purple-400 transition-colors">Explorar</a>
             </nav>
             
             <Button
@@ -200,67 +200,61 @@ export default function Explora() {
           </div>
         </header>
 
-        {/* Filtros por sentimiento */}
+        {/* Filtros por sentimiento - SOLO 3 OPCIONES */}
         <section className="mb-12">
           <div className="bg-gray-900/50 rounded-2xl p-6 backdrop-blur-sm border border-gray-700">
-            <h3 className="text-2xl font-bold mb-4 text-white">Filtrar por sentimiento</h3>
+            <h3 className="text-2xl font-bold mb-4 text-white">Explorar por Sentimiento</h3>
             <div className="flex flex-wrap gap-4">
               <Button
-                onClick={() => setActiveFilter('all')}
-                className={`px-6 py-3 rounded-lg transition-all ${
-                  activeFilter === 'all' 
-                    ? 'bg-purple-600 text-white shadow-lg' 
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                }`}
-              >
-                Todos ({stats.total})
-              </Button>
-              <Button
                 onClick={() => setActiveFilter('positive')}
-                className={`px-6 py-3 rounded-lg transition-all ${
+                className={`px-6 py-3 rounded-lg transition-all text-lg font-semibold ${
                   activeFilter === 'positive' 
-                    ? 'bg-green-600 text-white shadow-lg' 
+                    ? 'bg-green-600 text-white shadow-lg shadow-green-500/25' 
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 }`}
               >
-                👍 Positivas ({stats.positive})
+                👍 Top 10 Positivas ({stats.positive})
               </Button>
               <Button
                 onClick={() => setActiveFilter('negative')}
-                className={`px-6 py-3 rounded-lg transition-all ${
+                className={`px-6 py-3 rounded-lg transition-all text-lg font-semibold ${
                   activeFilter === 'negative' 
-                    ? 'bg-red-600 text-white shadow-lg' 
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-500/25' 
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 }`}
               >
-                👎 Negativas ({stats.negative})
+                👎 Top 10 Negativas ({stats.negative})
               </Button>
               <Button
                 onClick={() => setActiveFilter('neutral')}
-                className={`px-6 py-3 rounded-lg transition-all ${
+                className={`px-6 py-3 rounded-lg transition-all text-lg font-semibold ${
                   activeFilter === 'neutral' 
-                    ? 'bg-blue-600 text-white shadow-lg' 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' 
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 }`}
               >
-                💬 Neutrales ({stats.neutral})
+                💬 Top 10 Neutrales ({stats.neutral})
               </Button>
             </div>
           </div>
         </section>
 
-        {/* Sección Canciones Mejor Valoradas */}
+        {/* Sección Canciones */}
         <section className="mb-20">
           <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-5xl font-bold text-white">Canciones Mejor Valoradas</h2>
+            <h2 className="text-5xl font-bold text-white">
+              {activeFilter === 'positive' && '🎵 Canciones Más Positivas'}
+              {activeFilter === 'negative' && '🎵 Canciones Más Negativas'}
+              {activeFilter === 'neutral' && '🎵 Canciones Más Neutrales'}
+            </h2>
             <span className="text-sm bg-purple-600 px-3 py-1 rounded-full text-white">
-              {filteredSongs.length} canciones
+              {currentSongs.length} canciones
             </span>
           </div>
           
-          {filteredSongs.length > 0 ? (
+          {currentSongs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredSongs.map((song, index) => {
+              {currentSongs.map((song, index) => {
                 const reviewMeta = getReviewMeta(song.review_type, song.review_sentiment);
                 
                 return (
@@ -270,7 +264,6 @@ export default function Explora() {
                     onClick={() => handleItemClick('canción', song)}
                   >
                     <CardContent className="p-5 flex flex-col h-full">
-                      {/* Badge de posición */}
                       <div className="absolute -top-2 -left-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
                         #{index + 1}
                       </div>
@@ -302,7 +295,6 @@ export default function Explora() {
                         </div>
                       </div>
                       
-                      {/* Reseña mejorada */}
                       {song.review && (
                         <div className="mt-3">
                           <div className={getReviewStyles(song.review_type, song.review_sentiment)}>
@@ -349,10 +341,9 @@ export default function Explora() {
           ) : (
             <div className="text-center py-16 bg-purple-500/10 rounded-2xl border border-purple-500/20 backdrop-blur-sm">
               <p className="text-2xl text-gray-400 mb-6">
-                {activeFilter === 'all' 
-                  ? "Aún no hay canciones valoradas" 
-                  : `No hay canciones ${activeFilter}`
-                }
+                {activeFilter === 'positive' && 'Aún no hay canciones positivas'}
+                {activeFilter === 'negative' && 'Aún no hay canciones negativas'}
+                {activeFilter === 'neutral' && 'Aún no hay canciones neutrales'}
               </p>
               <Button 
                 onClick={() => navigate('/resenas')}
@@ -364,18 +355,22 @@ export default function Explora() {
           )}
         </section>
 
-        {/* Sección Álbumes Mejor Valorados */}
+        {/* Sección Álbumes */}
         <section className="mb-20">
           <div className="flex items-center gap-4 mb-8">
-            <h2 className="text-5xl font-bold text-white">Álbumes Mejor Valorados</h2>
+            <h2 className="text-5xl font-bold text-white">
+              {activeFilter === 'positive' && '💿 Álbumes Más Positivos'}
+              {activeFilter === 'negative' && '💿 Álbumes Más Negativos'}
+              {activeFilter === 'neutral' && '💿 Álbumes Más Neutrales'}
+            </h2>
             <span className="text-sm bg-pink-600 px-3 py-1 rounded-full text-white">
-              {filteredAlbums.length} álbumes
+              {currentAlbums.length} álbumes
             </span>
           </div>
           
-          {filteredAlbums.length > 0 ? (
+          {currentAlbums.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredAlbums.map((album, index) => {
+              {currentAlbums.map((album, index) => {
                 const reviewMeta = getReviewMeta(album.review_type, album.review_sentiment);
                 
                 return (
@@ -385,7 +380,6 @@ export default function Explora() {
                     onClick={() => handleItemClick('álbum', album)}
                   >
                     <CardContent className="p-5 flex flex-col h-full">
-                      {/* Badge de posición */}
                       <div className="absolute -top-2 -left-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
                         #{index + 1}
                       </div>
@@ -417,7 +411,6 @@ export default function Explora() {
                         </div>
                       </div>
                       
-                      {/* Reseña mejorada */}
                       {album.review && (
                         <div className="mt-3">
                           <div className={getReviewStyles(album.review_type, album.review_sentiment)}>
@@ -446,16 +439,6 @@ export default function Explora() {
                           </div>
                         </div>
                       )}
-                      
-                      <Button 
-                        className="mt-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white w-full text-sm transition-all duration-300 shadow-lg hover:shadow-pink-500/25"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/resenas?album=${encodeURIComponent(album.title)}&artist=${encodeURIComponent(album.artist)}`);
-                        }}
-                      >
-                        👁️ Ver Reseñas
-                      </Button>
                     </CardContent>
                   </Card>
                 );
@@ -464,12 +447,13 @@ export default function Explora() {
           ) : (
             <div className="text-center py-16 bg-pink-500/10 rounded-2xl border border-pink-500/20 backdrop-blur-sm">
               <p className="text-2xl text-gray-400 mb-4">
-                {activeFilter === 'all' 
-                  ? "Aún no hay álbumes valorados" 
-                  : `No hay álbumes ${activeFilter}`
-                }
+                {activeFilter === 'positive' && 'Aún no hay álbumes positivos'}
+                {activeFilter === 'negative' && 'Aún no hay álbumes negativos'}
+                {activeFilter === 'neutral' && 'Aún no hay álbumes neutrales'}
               </p>
-              <p className="text-sm text-gray-500 mb-6">La funcionalidad de reseñar álbumes estará disponible pronto</p>
+              <p className="text-sm text-gray-500 mb-6">
+                La funcionalidad de reseñar álbumes estará disponible pronto
+              </p>
             </div>
           )}
         </section>
