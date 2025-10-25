@@ -40,7 +40,13 @@ export default function Home() {
               >
                 Canciones
               </button>
-              <button className={isActive("/albumes")}>Álbumes</button>
+              <button
+                onClick={() => navigate("/albumes")}
+                className={isActive("/albumes")}
+              >
+                Álbumes
+              </button>
+
               <Button
                 variant="outline"
                 className="border-white text-white"

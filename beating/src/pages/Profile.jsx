@@ -3,14 +3,11 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 export default function Profile() {
   const navigate = useNavigate();
-  const [user, setUser] = useState({ 
-    nombre_usuario: "Cargando...", 
-    correo: "", 
-    fecha_creacion: "" 
-  });
+  const [user, setUser] = useState({ nombre_usuario: "Cargando...", correo: "", fecha_creacion: "" });
   const [resenas, setResenas] = useState([]);
   const [seguidos, setSeguidos] = useState([]);
   const [estadisticas, setEstadisticas] = useState({
@@ -19,60 +16,62 @@ export default function Profile() {
     resenas: 0,
     listas_reproduccion: 0
   });
-  const [activeTab, setActiveTab] = useState("resenas"); // "resenas" o "seguidos"
+  const [activeTab, setActiveTab] = useState("resenas");
   const [loading, setLoading] = useState(true);
 
-  // ID del usuario actual (en una app real esto vendría del contexto/auth)
-  const userId = 1; // Cambiar por el ID del usuario logueado
+  // 🔸 Nuevo: obtener ID desde el token
+  const token = localStorage.getItem('token');
+  let userId = null;
+
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      userId = decoded.id; // O la propiedad que uses en tu backend
+    } catch (error) {
+      console.error("Error al decodificar token:", error);
+      localStorage.removeItem('token');
+      navigate('/login');
+    }
+  } else {
+    navigate('/login');
+  }
 
   useEffect(() => {
-    cargarDatosUsuario();
+    if (userId) cargarDatosUsuario();
   }, [userId]);
 
-  const cargarDatosUsuario = async () => {
-    try {
-      setLoading(true);
-      
-      // Cargar datos del usuario
-      const userResponse = await fetch(`/api/usuarios/${userId}`);
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        setUser(userData);
-      }
+const cargarDatosUsuario = async () => {
+  try {
+    setLoading(true);
+    const headers = { Authorization: `Bearer ${token}` };
 
-      // Cargar reseñas del usuario
-      const resenasResponse = await fetch(`/api/resenas/usuario/${userId}`);
-      if (resenasResponse.ok) {
-        const resenasData = await resenasResponse.json();
-        setResenas(resenasData);
-      }
+    const [userResponse, resenasResponse, seguidosResponse, statsResponse] = await Promise.all([
+      fetch(`http://localhost:5000/api/usuarios/${userId}`, { headers }),
+      fetch(`http://localhost:5000/api/resenas/usuario/${userId}`, { headers }),
+      fetch(`http://localhost:5000/api/usuarios/${userId}/seguidos`, { headers }),
+      fetch(`http://localhost:5000/api/usuarios/${userId}/estadisticas`, { headers })
+    ]);
 
-      // Cargar usuarios seguidos
-      const seguidosResponse = await fetch(`/api/usuarios/${userId}/seguidos`);
-      if (seguidosResponse.ok) {
-        const seguidosData = await seguidosResponse.json();
-        setSeguidos(seguidosData);
-      }
-
-      // Cargar estadísticas
-      const statsResponse = await fetch(`/api/usuarios/${userId}/estadisticas`);
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setEstadisticas(statsData.estadisticas);
-      }
-
-    } catch (error) {
-      console.error("Error cargando datos del usuario:", error);
-    } finally {
-      setLoading(false);
+    if (userResponse.ok) setUser(await userResponse.json());
+    if (resenasResponse.ok) setResenas(await resenasResponse.json());
+    if (seguidosResponse.ok) setSeguidos(await seguidosResponse.json());
+    if (statsResponse.ok) {
+      const statsData = await statsResponse.json();
+      setEstadisticas(statsData.estadisticas);
     }
-  };
 
-  const handleLogout = () => {
-    // Aquí limpias tokens o sesión
-    console.log("Sesión cerrada");
-    navigate("/login");
-  };
+  } catch (error) {
+    console.error("Error cargando datos del usuario:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleLogout = () => {
+  localStorage.removeItem('token');
+  navigate('/login');
+};
+
 
   const formatearFecha = (fechaString) => {
     if (!fechaString) return "Fecha no disponible";
