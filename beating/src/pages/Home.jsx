@@ -1,61 +1,24 @@
 // src/pages/Home.jsx
-import React, { useState } from "react";
+import React,  { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { useNavigate, useLocation } from "react-router-dom";
-import Login from "./Login";
-import Register from "./Register";
+import { useNavigate} from "react-router-dom";
 
 export default function Home() {
-  const [showLogin, setShowLogin] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
+  //const [showLogin, setShowLogin] = useState(false);
+  //const [showRegister, setShowRegister] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const isActive = (path) =>
+  /*const isActive = (path) =>
     location.pathname === path
       ? "text-white font-medium border-b-2 border-pink-400 pb-1"
-      : "text-purple-300 hover:text-white";
+      : "text-purple-300 hover:text-white";*/
 
   return (
     <>
       <main className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)] relative">
         <div className="container mx-auto px-4 py-6">
-          {/* Header */}
-          <header className="flex justify-between items-center mb-12">
-            <h1
-              onClick={() => navigate("/")}
-              className="cursor-pointer text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
-            >
-              Beating
-            </h1>
-
-            <nav className="flex items-center gap-8">
-              <button onClick={() => navigate("/")} className={isActive("/")}>
-                Inicio
-              </button>
-              <button
-                onClick={() => navigate("/canciones")}
-                className={isActive("/canciones")}
-              >
-                Canciones
-              </button>
-              <button
-                onClick={() => navigate("/albumes")}
-                className={isActive("/albumes")}
-              >
-                Álbumes
-              </button>
-
-              <Button
-                variant="outline"
-                className="border-white text-white"
-                onClick={() => setShowLogin(true)}
-              >
-                Iniciar Sesión
-              </Button>
-            </nav>
-          </header>
+          
 
           {/* Contenido principal */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
@@ -159,26 +122,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Modales */}
-      {showLogin && (
-        <Login
-          onClose={() => setShowLogin(false)}
-          onSwitchToRegister={() => {
-            setShowLogin(false);
-            setShowRegister(true);
-          }}
-        />
-      )}
-
-      {showRegister && (
-        <Register
-          onClose={() => setShowRegister(false)}
-          onSwitchToLogin={() => {
-            setShowRegister(false);
-            setShowLogin(true);
-          }}
-        />
-      )}
+      
     </>
   );
 }

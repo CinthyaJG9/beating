@@ -1,6 +1,8 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from config import APP_CONFIG
+#from profileB import profileB_routes
+from auth.routes import init_auth_routes
 
 # Importar módulos
 from database.connection import db

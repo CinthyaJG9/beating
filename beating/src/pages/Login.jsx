@@ -1,14 +1,16 @@
-import { Button } from "./../components/ui/button";
-import { Dialog, DialogClose, DialogContent } from "../components/ui/dialog";
+import { Button } from "../components/ui/button";
+//import { Dialog, DialogClose, DialogContent } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { X } from "lucide-react";
 import React, { useState } from "react";
 import axios from "axios";
+import { useAuth } from './AuthContext.jsx';
 
 export default function Login({ onClose, onSwitchToRegister }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const { login } = useAuth(); 
 
   const handleLogin = async () => {
     try {
@@ -18,11 +20,17 @@ export default function Login({ onClose, onSwitchToRegister }) {
       });
 
       if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user_id', response.data.user_id);
-        localStorage.setItem('username', response.data.username);
+        const userData = {
+          id: response.data.user_id,
+          username: response.data.username
+          // ...puedes añadir más datos si tu API los devuelve (como el email)
+        };
+        //localStorage.setItem('token', response.data.token);
+        //localStorage.setItem('user_id', response.data.user_id);
+        //localStorage.setItem('username', response.data.username);
+        login(response.data.token, userData);
         onClose(); // Cierra el modal
-        window.location.href = '/resenas'; // Redirige
+        //window.location.href = '/resenas'; // Redirige
       }
     } catch (error) {
       if (error.response) {

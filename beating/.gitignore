@@ -1,3 +1,18 @@
+#Dependencias y cache
+node_modules
+/beating/venv/
+/beating/.venv/
+.env             
+dist
+dist-ssr
+*.local
+
+__pycache__/
+*.pyc
+
+.cache/huggingface/
+.cache/torch/
+
 # Logs
 logs
 *.log
