@@ -16,53 +16,52 @@ const Resenas = () => {
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState('search');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1); // ✅ Solo una declaración
+  const [totalPages, setTotalPages] = useState(1);
   
   const tracksPerPage = 10;
   const navigate = useNavigate();
 
   // Buscar artistas
-// Buscar artistas
-const searchArtists = async () => {
-  if (!searchTerm.trim()) {
-    setMessage('Por favor ingresa un nombre de artista');
-    return;
-  }
-  
-  console.log('🔍 Buscando artista:', searchTerm); // ← Agregar este log
-  
-  setLoading(true);
-  setArtists([]);
-  setSelectedArtist(null);
-  setTracks([]);
-  setSelectedTrack(null);
-  
-  try {
-    const response = await axios.get(`http://localhost:5000/buscar-artista?q=${encodeURIComponent(searchTerm)}`, {
-      timeout: 10000
-    });
-    
-    console.log('✅ Respuesta del backend:', response.data); // ← Agregar este log
-    
-    setArtists(response.data.artists || []);
-    setMessage(response.data.artists?.length ? '' : 'No se encontraron artistas');
-    setActiveTab('artists');
-  } catch (error) {
-    console.error('❌ Error completo:', error); // ← Agregar este log
-    console.error('❌ Response data:', error.response?.data); // ← Agregar este log
-    console.error('❌ Response status:', error.response?.status); // ← Agregar este log
-    
-    if (error.code === 'ECONNABORTED') {
-      setMessage('La búsqueda está tardando demasiado. Verifica que el servidor esté corriendo.');
-    } else if (error.response?.status === 500) {
-      setMessage('Error interno del servidor. Verifica la consola del backend.');
-    } else {
-      setMessage('Error al buscar artistas: ' + (error.response?.data?.error || error.message));
+  const searchArtists = async () => {
+    if (!searchTerm.trim()) {
+      setMessage('Por favor ingresa un nombre de artista');
+      return;
     }
-  } finally {
-    setLoading(false);
-  }
-};
+    
+    console.log('🔍 Buscando artista:', searchTerm);
+    
+    setLoading(true);
+    setArtists([]);
+    setSelectedArtist(null);
+    setTracks([]);
+    setSelectedTrack(null);
+    
+    try {
+      const response = await axios.get(`http://localhost:5000/buscar-artista?q=${encodeURIComponent(searchTerm)}`, {
+        timeout: 10000
+      });
+      
+      console.log('✅ Respuesta del backend:', response.data);
+      
+      setArtists(response.data.artists || []);
+      setMessage(response.data.artists?.length ? '' : 'No se encontraron artistas');
+      setActiveTab('artists');
+    } catch (error) {
+      console.error('❌ Error completo:', error);
+      console.error('❌ Response data:', error.response?.data);
+      console.error('❌ Response status:', error.response?.status);
+      
+      if (error.code === 'ECONNABORTED') {
+        setMessage('La búsqueda está tardando demasiado. Verifica que el servidor esté corriendo.');
+      } else if (error.response?.status === 500) {
+        setMessage('Error interno del servidor. Verifica la consola del backend.');
+      } else {
+        setMessage('Error al buscar artistas: ' + (error.response?.data?.error || error.message));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Obtener canciones del artista
   const fetchArtistTracks = async (artistId) => {
@@ -81,10 +80,7 @@ const searchArtists = async () => {
         id: artistId
       });
       setTracks(response.data.tracks || []);
-      
-      // ✅ Actualizar totalPages basado en las canciones recibidas
       setTotalPages(Math.ceil(response.data.tracks.length / tracksPerPage));
-      
       setMessage(response.data.tracks?.length ? '' : 'No se encontraron canciones');
       setActiveTab('tracks');
     } catch (error) {
@@ -107,7 +103,7 @@ const searchArtists = async () => {
     fetchArtistTracks(artist.id);
   };
 
-   const submitReview = async (e) => {
+  const submitReview = async (e) => {
     e.preventDefault();
     if (!selectedTrack) {
       setMessage('Por favor selecciona una canción');
@@ -173,9 +169,6 @@ const searchArtists = async () => {
       setLoading(true);
       setMessage('Creando playlist...');
       
-      // Obtener token de Spotify (esto depende de tu implementación)
-      //const spotifyToken = await obtenerTokenSpotify();
-      
       const response = await axios.post(
         'http://localhost:5000/crear_playlist',
         {},
@@ -199,311 +192,332 @@ const searchArtists = async () => {
     }
   };
 
-  // Función para obtener token de Spotify (simulada - debes implementarla)
-  const obtenerTokenSpotify = async () => {
-    // Implementación real dependerá de tu flujo de autenticación
-    // Esto es solo un ejemplo
-    if (window.Spotify) {
-      try {
-        const token = window.Spotify.getAccessToken();
-        if (token) return token;
-      } catch (e) {
-        console.error("Error obteniendo token de Spotify:", e);
-      }
-    }
-    
-    // Alternativa: puedes implementar un flujo OAuth aquí
-    throw new Error("Autenticación con Spotify no configurada");
-  };
-
   // Paginación
- // Paginación
   const indexOfLastTrack = currentPage * tracksPerPage;
   const indexOfFirstTrack = indexOfLastTrack - tracksPerPage;
   const currentTracks = tracks.slice(indexOfFirstTrack, indexOfLastTrack);
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8 p-4 bg-white rounded-lg shadow-sm">
-        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-          Beating
-        </h1>
-        <div className="flex gap-4">
-          <button 
-            onClick={() => navigate('/analisis')} 
-            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+    <div className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)]">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        {/* Header */}
+        <header className="flex justify-between items-center mb-8">
+          <h1 
+            onClick={() => navigate('/')}
+            className="cursor-pointer text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
           >
-            Ver Análisis
-          </button>
-      <button 
-        onClick={crearPlaylistSpotify}
-        disabled={loading}
-        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50"
-      >
-        {loading ? 'Procesando...' : 'Crear Playlist'}
-          </button>
-          <button 
-            onClick={() => navigate('/')} 
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition-all"
-          >
-            Inicio
-          </button>
+            Beating
+          </h1>
+          
+          <nav className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate('/analisis')} 
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-lg hover:shadow-blue-500/25"
+            >
+              Ver Análisis
+            </button>
+            <button 
+              onClick={crearPlaylistSpotify}
+              disabled={loading}
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-medium disabled:opacity-50 transition-all shadow-lg hover:shadow-green-500/25"
+            >
+              {loading ? 'Creando...' : 'Crear Playlist'}
+            </button>
+            <button 
+              onClick={() => navigate('/')} 
+              className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-medium transition-all border border-white/20"
+            >
+              Inicio
+            </button>
+          </nav>
+        </header>
+
+        {/* Tabs */}
+        <div className="mb-8 bg-white/5 rounded-2xl backdrop-blur-sm border border-white/10 overflow-hidden">
+          <Tabs>
+            <Tab 
+              active={activeTab === 'search'} 
+              onClick={() => setActiveTab('search')}
+              className="text-white"
+            >
+              Buscar Artista
+            </Tab>
+            <Tab 
+              active={activeTab === 'artists' && artists.length > 0} 
+              onClick={() => artists.length > 0 && setActiveTab('artists')}
+              disabled={artists.length === 0}
+              className="text-white"
+            >
+              Artistas
+            </Tab>
+            <Tab 
+              active={activeTab === 'tracks' && tracks.length > 0} 
+              onClick={() => tracks.length > 0 && setActiveTab('tracks')}
+              disabled={tracks.length === 0}
+              className="text-white"
+            >
+              Canciones
+            </Tab>
+            <Tab 
+              active={activeTab === 'review' && selectedTrack} 
+              onClick={() => selectedTrack && setActiveTab('review')}
+              disabled={!selectedTrack}
+              className="text-white"
+            >
+              Escribir Reseña
+            </Tab>
+          </Tabs>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="mb-6 bg-white rounded-lg shadow-sm overflow-hidden">
-        <Tabs>
-          <Tab 
-            active={activeTab === 'search'} 
-            onClick={() => setActiveTab('search')}
-          >
-            Buscar Artista
-          </Tab>
-          <Tab 
-            active={activeTab === 'artists' && artists.length > 0} 
-            onClick={() => artists.length > 0 && setActiveTab('artists')}
-            disabled={artists.length === 0}
-          >
-            Artistas
-          </Tab>
-          <Tab 
-            active={activeTab === 'tracks' && tracks.length > 0} 
-            onClick={() => tracks.length > 0 && setActiveTab('tracks')}
-            disabled={tracks.length === 0}
-          >
-            Canciones
-          </Tab>
-          <Tab 
-            active={activeTab === 'review' && selectedTrack} 
-            onClick={() => selectedTrack && setActiveTab('review')}
-            disabled={!selectedTrack}
-          >
-            Escribir Reseña
-          </Tab>
-        </Tabs>
-      </div>
-
-      {/* Contenido de las pestañas */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        {/* Pestaña de búsqueda */}
-        {activeTab === 'search' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Buscar Artista</h2>
-            <div className="flex flex-col md:flex-row gap-4">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && searchArtists()}
-                placeholder="Busca un artista (ej. The Beatles, ABBA)..."
-                className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all"
-                disabled={loading}
-              />
-              <button 
-                onClick={searchArtists}
-                disabled={loading || !searchTerm.trim()}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 transition-all shadow-md hover:shadow-lg"
-              >
-                {loading ? 'Buscando...' : 'Buscar'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Pestaña de artistas */}
-        {activeTab === 'artists' && artists.length > 0 && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Artistas Encontrados</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {artists.map(artist => (
-                <div 
-                  key={artist.id}
-                  onClick={() => handleSelectArtist(artist)}
-                  className="p-4 hover:bg-purple-50 cursor-pointer rounded-lg border border-gray-200 transition-all hover:border-purple-300 hover:shadow-md flex items-center gap-4"
+        {/* Contenido principal */}
+        <div className="bg-white/5 rounded-2xl backdrop-blur-sm border border-white/10 p-8">
+          {/* Pestaña de búsqueda */}
+          {activeTab === 'search' && (
+            <div className="space-y-6">
+              <h2 className="text-3xl font-bold text-white mb-4">Buscar Artista</h2>
+              <div className="flex flex-col md:flex-row gap-4">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && searchArtists()}
+                  placeholder="Busca un artista (ej. The Beatles, ABBA)..."
+                  className="flex-1 p-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all"
+                  disabled={loading}
+                />
+                <button 
+                  onClick={searchArtists}
+                  disabled={loading || !searchTerm.trim()}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 rounded-xl font-medium disabled:opacity-50 transition-all shadow-lg hover:shadow-purple-500/25"
                 >
-                  {artist.image && (
-                    <img 
-                      src={artist.image} 
-                      alt={artist.name}
-                      className="w-16 h-16 rounded-full object-cover flex-shrink-0 border-2 border-purple-200"
-                    />
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Buscando...
+                    </div>
+                  ) : (
+                    'Buscar Artista'
                   )}
-                  <div className="overflow-hidden">
-                    <h3 className="font-semibold text-lg truncate">{artist.name}</h3>
-                    {artist.genres?.length > 0 && (
-                      <p className="text-sm text-gray-600 truncate">
-                        {artist.genres.slice(0, 2).join(', ')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Pestaña de artistas */}
+          {activeTab === 'artists' && artists.length > 0 && (
+            <div className="space-y-6">
+              <h2 className="text-3xl font-bold text-white mb-6">Artistas Encontrados</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {artists.map(artist => (
+                  <div 
+                    key={artist.id}
+                    onClick={() => handleSelectArtist(artist)}
+                    className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-6 cursor-pointer transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/10 group"
+                  >
+                    <div className="flex items-center gap-4">
+                      {artist.image && (
+                        <img 
+                          src={artist.image} 
+                          alt={artist.name}
+                          className="w-20 h-20 rounded-full object-cover border-2 border-purple-400/50 group-hover:border-purple-400 transition-all"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-lg text-white truncate mb-1">{artist.name}</h3>
+                        {artist.genres?.length > 0 && (
+                          <p className="text-sm text-purple-300 truncate">
+                            {artist.genres.slice(0, 2).join(', ')}
+                          </p>
+                        )}
+                        {artist.followers && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Intl.NumberFormat().format(artist.followers)} seguidores
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pestaña de canciones */}
+          {activeTab === 'tracks' && selectedArtist && (
+            <div className="space-y-6">
+              {/* Header del artista */}
+              <div className="flex flex-col md:flex-row gap-6 items-center md:items-start mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
+                {selectedArtist.image && (
+                  <img 
+                    src={selectedArtist.image} 
+                    alt={selectedArtist.name}
+                    className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-purple-400/50 shadow-lg"
+                  />
+                )}
+                <div className="flex-1">
+                  <h2 className="text-3xl font-bold text-white mb-3">{selectedArtist.name}</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    {selectedArtist.genres?.length > 0 && (
+                      <p className="text-purple-300">
+                        <span className="font-medium text-white">Géneros:</span> {selectedArtist.genres.slice(0, 3).join(', ')}
                       </p>
                     )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Pestaña de canciones */}
-      {activeTab === 'tracks' && selectedArtist && (
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-6 items-center md:items-start mb-6">
-            {selectedArtist.image && (
-              <img 
-                src={selectedArtist.image} 
-                alt={selectedArtist.name}
-                className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-purple-200 shadow-md"
-              />
-            )}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">{selectedArtist.name}</h2>
-              {selectedArtist.genres?.length > 0 && (
-                <p className="text-gray-600 mb-1">
-                  <span className="font-medium">Géneros:</span> {selectedArtist.genres.slice(0, 3).join(', ')}
-                </p>
-              )}
-              <p className="text-gray-600">
-                <span className="font-medium">Seguidores:</span> {new Intl.NumberFormat().format(selectedArtist.followers)}
-              </p>
-              <p className="text-gray-600">
-                <span className="font-medium">Canciones encontradas:</span> {tracks.length}
-              </p>
-            </div>
-          </div>
-
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Canciones</h3>
-          
-          {currentTracks.length > 0 ? (
-            <div className="space-y-3">
-              {currentTracks.map(track => (
-                <div
-                  key={track.id}
-                  onClick={() => {
-                    setSelectedTrack(track);
-                    setActiveTab('review');
-                  }}
-                  className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center gap-4 ${
-                    selectedTrack?.id === track.id 
-                      ? 'border-purple-500 bg-purple-50 shadow-md' 
-                      : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-                  }`}
-                >
-                  {track.album_image && (
-                    <img 
-                      src={track.album_image} 
-                      alt={track.album}
-                      className="w-16 h-16 rounded object-cover flex-shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-lg truncate">{track.name}</h4>
-                    <p className="text-gray-600 truncate">
-                      {track.artists.join(', ')} • {track.album}
+                    <p className="text-purple-300">
+                      <span className="font-medium text-white">Seguidores:</span> {new Intl.NumberFormat().format(selectedArtist.followers)}
                     </p>
-                    {track.is_top_track && (
-                      <span className="inline-block mt-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                        Popular
-                      </span>
-                    )}
+                    <p className="text-purple-300">
+                      <span className="font-medium text-white">Canciones:</span> {tracks.length} encontradas
+                    </p>
                   </div>
-                  {track.preview_url && (
-                    <audio 
-                      controls
-                      className="hidden sm:block h-8"
-                      src={track.preview_url}
-                      onPlay={(e) => {
-                        document.querySelectorAll('audio').forEach(a => {
-                          if (a !== e.target) a.pause();
-                        });
-                      }}
-                    />
-                  )}
                 </div>
-              ))}
+              </div>
+
+              <h3 className="text-2xl font-bold text-white mb-6">Canciones</h3>
+              
+              {currentTracks.length > 0 ? (
+                <div className="space-y-4">
+                  {currentTracks.map(track => (
+                    <div
+                      key={track.id}
+                      onClick={() => {
+                        setSelectedTrack(track);
+                        setActiveTab('review');
+                      }}
+                      className={`p-4 rounded-xl cursor-pointer transition-all flex items-center gap-4 group ${
+                        selectedTrack?.id === track.id 
+                          ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/50 shadow-lg shadow-purple-500/10' 
+                          : 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-400/30 hover:shadow-lg hover:shadow-purple-500/10'
+                      }`}
+                    >
+                      {track.album_image && (
+                        <img 
+                          src={track.album_image} 
+                          alt={track.album}
+                          className="w-16 h-16 rounded-xl object-cover flex-shrink-0 group-hover:scale-110 transition-transform"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-lg text-white truncate mb-1">{track.name}</h4>
+                        <p className="text-purple-300 truncate text-sm">
+                          {track.artists.join(', ')} • {track.album}
+                        </p>
+                        {track.is_top_track && (
+                          <span className="inline-block mt-2 text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2 py-1 rounded-full">
+                            ⭐ Popular
+                          </span>
+                        )}
+                      </div>
+                      {track.preview_url && (
+                        <audio 
+                          controls
+                          className="hidden sm:block h-8 bg-white/10 rounded-lg"
+                          src={track.preview_url}
+                          onPlay={(e) => {
+                            document.querySelectorAll('audio').forEach(a => {
+                              if (a !== e.target) a.pause();
+                            });
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-400 text-lg">No se encontraron canciones</p>
+                </div>
+              )}
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-8">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
             </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">No se encontraron canciones</p>
           )}
 
-          {/* Paginación */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
+          {/* Pestaña de reseña */}
+          {activeTab === 'review' && selectedTrack && (
+            <div className="space-y-6">
+              {/* Header de la canción */}
+              <div className="flex items-center gap-6 mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
+                {selectedTrack.album_image && (
+                  <img 
+                    src={selectedTrack.album_image} 
+                    alt={selectedTrack.album}
+                    className="w-20 h-20 rounded-xl object-cover border-2 border-purple-400/50"
+                  />
+                )}
+                <div>
+                  <h2 className="text-3xl font-bold text-white mb-2">Escribe tu reseña</h2>
+                  <p className="text-lg text-purple-300">
+                    {selectedTrack.name} • {selectedTrack.artists.join(', ')}
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={submitReview} className="space-y-6">
+                <div>
+                  <label htmlFor="review" className="block text-lg font-medium text-white mb-3">
+                    Comparte tu opinión:
+                  </label>
+                  <textarea
+                    id="review"
+                    value={review}
+                    onChange={(e) => setReview(e.target.value)}
+                    placeholder="¿Qué te parece esta canción? ¿Qué emociones te transmite? ¿Qué recuerdos evoca?..."
+                    rows="8"
+                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all resize-none"
+                    required
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('tracks')}
+                    className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-xl font-medium transition-all border border-white/20"
+                  >
+                    Volver a Canciones
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || !review.trim()}
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3 rounded-xl font-medium disabled:opacity-50 transition-all shadow-lg hover:shadow-purple-500/25"
+                  >
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Enviando...
+                      </div>
+                    ) : (
+                      'Publicar Reseña'
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>
-      )}
 
-        {/* Pestaña de reseña */}
-        {activeTab === 'review' && selectedTrack && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 mb-6">
-              {selectedTrack.album_image && (
-                <img 
-                  src={selectedTrack.album_image} 
-                  alt={selectedTrack.album}
-                  className="w-16 h-16 rounded object-cover"
-                />
-              )}
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Escribe tu reseña</h2>
-                <p className="text-lg text-gray-600">
-                  {selectedTrack.name} • {selectedTrack.artists.join(', ')}
-                </p>
-              </div>
+        {/* Mensajes de estado */}
+        {message && (
+          <div className={`mt-6 p-4 rounded-xl backdrop-blur-sm border ${
+            message.includes('éxito') || message.includes('Creando') || message.includes('éxito')
+              ? 'bg-green-500/20 text-green-300 border-green-500/30' 
+              : 'bg-red-500/20 text-red-300 border-red-500/30'
+          }`}>
+            <div className="flex items-center gap-2">
+              {message.includes('éxito') ? '✅' : '⚠️'} {message}
             </div>
-
-            <form onSubmit={submitReview} className="space-y-4">
-              <div>
-                <label htmlFor="review" className="block text-sm font-medium text-gray-700 mb-2">
-                  Comparte tu opinión:
-                </label>
-                <textarea
-                  id="review"
-                  value={review}
-                  onChange={(e) => setReview(e.target.value)}
-                  placeholder="¿Qué te parece esta canción? ¿Qué emociones te transmite?..."
-                  rows="6"
-                  className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all"
-                  required
-                />
-              </div>
-              
-              <div className="flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('tracks')}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition-all"
-                >
-                  Volver
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !review.trim()}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 transition-all shadow-md hover:shadow-lg"
-                >
-                  {loading ? 'Enviando...' : 'Publicar Reseña'}
-                </button>
-              </div>
-            </form>
           </div>
         )}
       </div>
-
-      {/* Mensajes de estado */}
-      {message && (
-        <div className={`mt-6 p-4 rounded-lg ${
-          message.includes('éxito') || message.includes('Creando')
-            ? 'bg-green-100 text-green-800 border border-green-200' 
-            : 'bg-red-100 text-red-800 border border-red-200'
-        }`}>
-          {message}
-        </div>
-      )}
     </div>
   );
 };

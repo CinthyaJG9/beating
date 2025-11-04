@@ -1,35 +1,62 @@
 import { Button } from "./../components/ui/button";
-import { Dialog, DialogClose, DialogContent } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { X } from "lucide-react";
 import React, { useState } from "react";
-import axios from "axios";
 
 export default function Login({ onClose, onSwitchToRegister }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    setLoading(true);
+    setError("");
+    
     try {
-      const response = await axios.post('http://localhost:5000/login', {
-        email,
-        password
+      const response = await fetch('http://localhost:5000/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
       });
 
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user_id', response.data.user_id);
-        localStorage.setItem('username', response.data.username);
-        onClose(); // Cierra el modal
-        window.location.href = '/resenas'; // Redirige
+      const data = await response.json();
+
+      if (response.ok) {
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user_id', data.user_id);
+          localStorage.setItem('username', data.username);
+          
+          // Cierra el modal primero
+          if (typeof onClose === 'function') {
+            onClose();
+          }
+          
+          // Redirige a /resenas después de cerrar el modal
+          setTimeout(() => {
+            window.location.href = '/resenas';
+          }, 100);
+        }
+      } else {
+        setError(data.error || 'Error en las credenciales');
       }
     } catch (error) {
-      if (error.response) {
-        setError(error.response.data.error || 'Error en las credenciales');
-      } else {
-        setError('No se pudo conectar al servidor');
-      }
+      console.error('Error completo:', error);
+      setError('No se pudo conectar al servidor. Verifica que el backend esté corriendo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleLogin();
     }
   };
 
@@ -58,7 +85,7 @@ export default function Login({ onClose, onSwitchToRegister }) {
 
           {/* Mensaje de error */}
           {error && (
-            <div className="text-red-400 text-sm text-center bg-red-400/10 py-2 px-3 rounded-lg">
+            <div className="text-red-400 text-sm text-center bg-red-400/10 py-2 px-3 rounded-lg border border-red-400/30">
               {error}
             </div>
           )}
@@ -73,6 +100,7 @@ export default function Login({ onClose, onSwitchToRegister }) {
               className="bg-gray-800 border-gray-600 text-white h-12 focus:border-purple-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyPress={handleKeyPress}
               placeholder="tu@email.com"
             />
           </div>
@@ -87,15 +115,24 @@ export default function Login({ onClose, onSwitchToRegister }) {
               className="bg-gray-800 border-gray-600 text-white h-12 focus:border-purple-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={handleKeyPress}
               placeholder="••••••••"
             />
           </div>
 
           <Button
             onClick={handleLogin}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-12 font-semibold text-lg"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-12 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Iniciar Sesión
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Conectando...
+              </div>
+            ) : (
+              "Iniciar Sesión"
+            )}
           </Button>
 
           <div className="text-center pt-4">
