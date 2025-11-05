@@ -5,7 +5,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { useNavigate} from "react-router-dom";
 
 export default function Home() {
-  //const [showLogin, setShowLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   //const [showRegister, setShowRegister] = useState(false);
   const navigate = useNavigate();
 
@@ -41,7 +41,7 @@ export default function Home() {
                 </Button>
 
                 <Button
-                  onClick={() => setShowLogin(true)}
+                  onClick={() => navigate("/resenas")}
                   className="bg-gradient-to-r from-pink-400 to-purple-500 hover:opacity-90 text-white px-10 py-6 text-xl rounded-xl"
                 >
                   Crear Reseña

@@ -4,11 +4,19 @@ import jwt
 import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
-from wordcloud import WordCloud
+import spacy
+from wordcloud import WordCloud, STOPWORDS
 from database.connection import db
 from reviews.sentiment import sentiment_analyzer
 from spotify.client import spotify_client
 from config import APP_CONFIG
+
+try:
+    nlp = spacy.load("es_core_news_sm")
+except OSError:
+    print("El modelo de SpaCy 'es_core_news_sm' no se encontró. Asegúrate de haber ejecutado 'python -m spacy download es_core_news_sm'")
+    # Puedes lanzar un error o usar un modelo básico si prefieres
+    nlp = None 
 
 def token_required(f):
     @wraps(f)
@@ -37,21 +45,46 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# Funciones auxiliares para gráficos (mover a utils/helpers.py después)
 def generar_wordcloud(textos):
-    # Unir todos los textos
-    texto_completo = ' '.join(textos)
+    # 1. Unir la lista de textos en una sola cadena
+    if isinstance(textos, list):
+        texto_completo = " ".join(textos)
+    else:
+        texto_completo = textos
+
+    # 2. Procesamiento de SpaCy
+    doc = nlp(texto_completo) 
+    allowed_pos = {'ADJ', 'NOUN', 'VERB'}
     
-    # Configurar la nube de palabras
+    filtered_words = [
+        token.lemma_.lower() 
+        for token in doc 
+        if token.pos_ in allowed_pos and not token.is_stop and token.is_alpha
+    ]
+    
+    texto_filtrado = " ".join(filtered_words)
+    
+    # 3. Consolidación de Stopwords (¡Corregido el error de sintaxis y mejorado el filtro!)
+    spanish_stopwords = set(STOPWORDS)
+    
+    # Lista de palabras específicas del dominio o lemas extraños que queremos ignorar
+    domain_stopwords = {
+        'canción', 'álbum', 'artista', 'track', 'song', 'pegadecer', 
+        'contenido', 'algo', 'crecer', 'letra', 'musical', 'lirica', 
+        'lirico', 'cotidiano', 'obra','divertir', 'complementar' 
+    }
+    
+    all_stopwords = spanish_stopwords.union(domain_stopwords)
+
     wordcloud = WordCloud(
         width=800,
         height=400,
         background_color='white',
-        colormap='viridis',
+        colormap='magma', 
         max_words=100,
-        stopwords=['la', 'el', 'los', 'las', 'un', 'una', 'es', 'de', 'en', 'y']
-    ).generate(texto_completo)
-    
+        stopwords=all_stopwords 
+    ).generate(texto_filtrado)
+
     # Generar imagen
     plt.figure(figsize=(10, 5))
     plt.imshow(wordcloud, interpolation='bilinear')
@@ -61,6 +94,7 @@ def generar_wordcloud(textos):
     img = BytesIO()
     plt.savefig(img, format='PNG', bbox_inches='tight', dpi=100)
     plt.close()
+    
     return base64.b64encode(img.getvalue()).decode('utf-8')
 
 def generar_grafico_sentimientos(datos):

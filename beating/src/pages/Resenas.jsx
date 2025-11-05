@@ -201,14 +201,7 @@ const Resenas = () => {
     <div className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)]">
       <div className="container mx-auto px-4 py-6 max-w-6xl">
         {/* Header */}
-        <header className="flex justify-between items-center mb-8">
-          <h1 
-            onClick={() => navigate('/')}
-            className="cursor-pointer text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
-          >
-            Beating
-          </h1>
-          
+        <header className="flex justify-between items-center mb-8">     
           <nav className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/analisis')} 
@@ -222,12 +215,6 @@ const Resenas = () => {
               className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-medium disabled:opacity-50 transition-all shadow-lg hover:shadow-green-500/25"
             >
               {loading ? 'Creando...' : 'Crear Playlist'}
-            </button>
-            <button 
-              onClick={() => navigate('/')} 
-              className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-medium transition-all border border-white/20"
-            >
-              Inicio
             </button>
           </nav>
         </header>

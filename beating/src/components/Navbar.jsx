@@ -68,50 +68,42 @@ export default function Navbar() {
               
               {/* Links de Navegación */}
               <NavigationMenuItem>
-                <Link to="/" legacyBehavior passHref>
-                  <NavigationMenuLink 
+                  <NavigationMenuLink to="/"
                     className={navLinkStyles} 
                     active={location.pathname === '/'}
                   >
                     Inicio
                   </NavigationMenuLink>
-                </Link>
               </NavigationMenuItem>
               
               <NavigationMenuItem>
-                <Link to="/canciones" legacyBehavior passHref>
-                  <NavigationMenuLink 
+                  <NavigationMenuLink to="/canciones"
                     className={navLinkStyles} 
                     active={location.pathname === '/canciones'}
                   >
                     Canciones
                   </NavigationMenuLink>
-                </Link>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
-                <Link to="/albumes" legacyBehavior passHref>
-                  <NavigationMenuLink 
+                  <NavigationMenuLink to="/albumes"
                     className={navLinkStyles} 
                     active={location.pathname === '/albumes'}
                   >
                     Álbumes
                   </NavigationMenuLink>
-                </Link>
               </NavigationMenuItem>
 
               {/* Lógica de botones dinámicos */}
               {isAuthenticated ? (
                 <>
                   <NavigationMenuItem>
-                    <Link to="/profileB" legacyBehavior passHref>
-                      <NavigationMenuLink 
+                      <NavigationMenuLink to="/profileB"
                         className={navLinkStyles} 
                         active={location.pathname === '/profileB'}
                       >
                         Hola, {user.username}
                       </NavigationMenuLink>
-                    </Link>
                   </NavigationMenuItem>
                   
                   <NavigationMenuItem>

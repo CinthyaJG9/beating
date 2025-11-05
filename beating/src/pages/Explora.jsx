@@ -173,33 +173,6 @@ export default function Explora() {
       </div>
 
       <div className="container mx-auto px-6 py-10 relative z-10">
-        <header className="flex justify-between items-center mb-12 pt-8">
-          <div>
-            <a href="/" className="inline-block no-underline hover:opacity-90">
-              <h1 className="text-8xl font-extrabold bg-gradient-to-r from-[#ae67fa] to-[#f49867] bg-clip-text text-transparent tracking-tight">
-                Beating
-              </h1>
-              <p className="text-gray-400 mt-4 text-xl">
-                Explora la música mejor valorada por la comunidad
-              </p>
-            </a>
-          </div>
-          
-          <div className="flex items-center gap-8">
-            <nav className="flex gap-12 text-2xl font-bold">
-              <a href="/" className="text-[#7b2eb0] hover:text-purple-400 transition-colors">Inicio</a>
-              <a href="/explora" className="text-[#7b2eb0] hover:text-purple-400 transition-colors">Explorar</a>
-            </nav>
-            
-            <Button
-              className="border border-[#c584f5] text-white hover:bg-purple-900/30 transition-colors text-xl py-3 px-6 rounded-md"
-              onClick={() => navigate("/login")}
-            >
-              Iniciar Sesión
-            </Button>
-          </div>
-        </header>
-
         {/* Filtros por sentimiento - SOLO 3 OPCIONES */}
         <section className="mb-12">
           <div className="bg-gray-900/50 rounded-2xl p-6 backdrop-blur-sm border border-gray-700">

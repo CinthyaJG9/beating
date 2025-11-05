@@ -106,23 +106,6 @@ export default function Canciones() {
     <>
       <main className="min-h-screen bg-gradient-to-br from-[#1a1124] to-[#2a1a3a] text-white">
         <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <header className="flex justify-between items-center mb-12">
-            <h1
-              onClick={() => navigate("/")}
-              className="cursor-pointer text-5xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent hover:from-purple-400 hover:to-pink-400 transition-all duration-300"
-            >
-              Beating
-            </h1>
-            <Button
-              variant="outline"
-              className="border-white text-white hover:bg-white/20 hover:border-white transition-colors text-lg px-6 py-3"
-              onClick={() => navigate("/")}
-            >
-              ← Volver al Inicio
-            </Button>
-          </header>
-
           {/* Buscador */}
           <div className="mb-12 text-center">
             <div className="relative max-w-2xl mx-auto">

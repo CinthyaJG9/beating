@@ -29,14 +29,7 @@ export default function App() {
           <Route path="/auth-required" element={<AuthRequired />} />
           <Route path="/canciones" element={<Canciones />} />
           <Route path="/albumes" element={<Albumes />} />
-          {/* Rutas Privadas (Protegidas) */}
-          <Route 
-            path="/profileB" element={
-              <AuthRequired>
-                <ProfileB />
-              </AuthRequired>
-            } 
-          />
+          <Route path="/profileB" element={<ProfileB /> } />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

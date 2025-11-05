@@ -41,11 +41,12 @@ export const AuthProvider = ({ children }) => {
 
       // Comprobar si el token ha expirado
       if (decoded.exp * 1000 > Date.now()) {
-        setIsAuthenticated(true);
-        setUser({
-          id: decoded.user_id, // Asegúrate que esta clave coincida con tu backend
+        const userData = {
+          id: decoded.user_id, // Asume que el backend usa 'user_id'
           username: decoded.username 
-        });
+        };
+        setIsAuthenticated(true);
+        setUser(userData);
         localStorage.setItem('token', token);
         return true;
       }

@@ -1,5 +1,6 @@
 // src/components/ui/navigation-menu.jsx
 import React from "react";
+import { Link } from "react-router-dom"; 
 
 export function NavigationMenu({ children, className = "" }) {
   return (
@@ -21,13 +22,14 @@ export function NavigationMenuItem({ children }) {
   return <li className="navigation-menu-item">{children}</li>;
 }
 
-export function NavigationMenuLink({ children, className = "" }) {
+export function NavigationMenuLink({ children, className = "", to = "#", passHref, legacyBehavior, ...props }) {
   return (
-    <a
-      href="#"
+    <Link
+      to={to}
       className={`navigation-menu-link cursor-pointer ${className}`}
+      {...props}
     >
       {children}
-    </a>
+    </Link>
   );
 }
