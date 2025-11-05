@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
 import spacy
-from wordcloud import WordCloud, STOPWORDS
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 from database.connection import db
 from reviews.sentiment import sentiment_analyzer
 from spotify.client import spotify_client
@@ -17,6 +17,17 @@ except OSError:
     print("El modelo de SpaCy 'es_core_news_sm' no se encontró. Asegúrate de haber ejecutado 'python -m spacy download es_core_news_sm'")
     # Puedes lanzar un error o usar un modelo básico si prefieres
     nlp = None 
+
+def color_func_vibrante(word, font_size, position, orientation, random_state=None, **kwargs):
+    colores_vibrantes = [
+        (255, 105, 180),  # Rosa
+        (147, 112, 219),  # Púrpura Claro
+        (255, 255, 255),  # Blanco
+        (255, 215, 0)     # Dorado/Amarillo
+    ]
+    import random
+    r, g, b = random.choice(colores_vibrantes)
+    return f"rgb({r}, {g}, {b})"
 
 def token_required(f):
     @wraps(f)
@@ -46,32 +57,34 @@ def token_required(f):
     return decorated
 
 def generar_wordcloud(textos):
-    # 1. Unir la lista de textos en una sola cadena
+    if nlp is None: 
+        return base64.b64encode(b"").decode('utf-8') 
+    
     if isinstance(textos, list):
         texto_completo = " ".join(textos)
     else:
         texto_completo = textos
 
-    # 2. Procesamiento de SpaCy
     doc = nlp(texto_completo) 
-    allowed_pos = {'ADJ', 'NOUN', 'VERB'}
+    allowed_pos = {'ADJ'}           #Adjetivo está más depurado, podemos agregar 'NOUN' pero hay que agregar más STOPWORDS
     
     filtered_words = [
-        token.lemma_.lower() 
+        token.text.lower() 
         for token in doc 
         if token.pos_ in allowed_pos and not token.is_stop and token.is_alpha
     ]
     
     texto_filtrado = " ".join(filtered_words)
     
-    # 3. Consolidación de Stopwords (¡Corregido el error de sintaxis y mejorado el filtro!)
     spanish_stopwords = set(STOPWORDS)
     
-    # Lista de palabras específicas del dominio o lemas extraños que queremos ignorar
     domain_stopwords = {
-        'canción', 'álbum', 'artista', 'track', 'song', 'pegadecer', 
+        'cancion', 'álbum', 'artista', 'track', 'song', 'pegadecer', 
         'contenido', 'algo', 'crecer', 'letra', 'musical', 'lirica', 
-        'lirico', 'cotidiano', 'obra','divertir', 'complementar' 
+        'lirico', 'cotidiano', 'obra', 'divertir', 'complementar', 
+        'canción', 'situaciones', 'banda', 'canciones', 'album', 'jazz',
+        'pop', 'año', 'barreras', 'vogue', 'combinación', 'modelo', 'cotorra',
+        'labioso', 'auditivo'
     }
     
     all_stopwords = spanish_stopwords.union(domain_stopwords)
@@ -79,8 +92,8 @@ def generar_wordcloud(textos):
     wordcloud = WordCloud(
         width=800,
         height=400,
-        background_color='white',
-        colormap='magma', 
+        background_color='black',
+        color_func=color_func_vibrante,
         max_words=100,
         stopwords=all_stopwords 
     ).generate(texto_filtrado)
@@ -88,11 +101,12 @@ def generar_wordcloud(textos):
     # Generar imagen
     plt.figure(figsize=(10, 5))
     plt.imshow(wordcloud, interpolation='bilinear')
+    plt.gca().set_frame_on(False) 
     plt.axis('off')
     
     # Convertir a base64
     img = BytesIO()
-    plt.savefig(img, format='PNG', bbox_inches='tight', dpi=100)
+    plt.savefig(img, format='PNG', bbox_inches='tight', dpi=100, facecolor='#1e1626', transparent=True)
     plt.close()
     
     return base64.b64encode(img.getvalue()).decode('utf-8')
