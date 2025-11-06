@@ -4,13 +4,16 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { useNavigate } from "react-router-dom";
 import Login from "./Login";
+import { useAuth } from "../pages/AuthContext";
 
 export default function Canciones() {
+
+  const { isAuthenticated } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [search, setSearch] = useState("");
   const [canciones, setCanciones] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [userLoggedIn, setUserLoggedIn] = useState(false);
+
   const navigate = useNavigate();
 
   // Buscar canciones cuando cambie el término de búsqueda
@@ -76,19 +79,41 @@ export default function Canciones() {
     return (rating * 5).toFixed(1);
   };
 
-  const handleCrearResena = (cancion) => {
-    if (!userLoggedIn) {
-      setShowLogin(true);
-      return;
-    }
-    
-    if (cancion.existe_en_bd) {
-      navigate(`/resenas/cancion/${cancion.id_cancion}`);
-    } else {
-      console.log("Crear reseña para canción de Spotify:", cancion);
-      alert(`Función de reseña para "${cancion.titulo}" de Spotify en desarrollo`);
-    }
-  };
+// En Canciones.jsx - modifica la función handleCrearResena
+const handleCrearResena = (cancion) => {
+  if (!isAuthenticated) {
+    setShowLogin(true);
+    return;
+  }
+  
+  if (cancion.existe_en_bd) {
+    // Si la canción ya existe en nuestra BD, redirigir directamente a reseñas con los datos
+    navigate('/resenas', { 
+      state: { 
+        selectedSong: {
+          id: cancion.id_cancion,
+          name: cancion.titulo,
+          artist: cancion.artista,
+          album: cancion.album_titulo,
+          image: cancion.imagen_url
+        }
+      }
+    });
+  } else {
+    // Para canciones de Spotify que no están en nuestra BD
+    navigate('/resenas', { 
+      state: { 
+        spotifySong: {
+          name: cancion.titulo,
+          artist: cancion.artista,
+          album: cancion.album_titulo,
+          image: cancion.imagen_url,
+          spotifyId: cancion.id_spotify
+        }
+      }
+    });
+  }
+};
 
   const handleReproducir = (cancion) => {
     if (cancion.preview_url) {

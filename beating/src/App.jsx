@@ -15,9 +15,9 @@ import Albumes from "./pages/Albumes";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        {/* Navbar ahora tendrá acceso a useAuth() */}
+    <BrowserRouter>
+      {/* 👇 AuthProvider debe envolver todo lo que use useAuth() */}
+      <AuthProvider>
         <Navbar /> 
         <Routes>
           <Route path="/" element={<Home />} />
@@ -31,7 +31,7 @@ export default function App() {
           <Route path="/albumes" element={<Albumes />} />
           <Route path="/profileB" element={<ProfileB /> } />
         </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

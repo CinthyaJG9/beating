@@ -1,25 +1,30 @@
 // src/pages/Home.jsx
-import React,  { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../pages/AuthContext"; 
+import Login from "./Login"; // 
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
-  //const [showRegister, setShowRegister] = useState(false);
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth(); // 👈 Obtener estado de autenticación
 
-  /*const isActive = (path) =>
-    location.pathname === path
-      ? "text-white font-medium border-b-2 border-pink-400 pb-1"
-      : "text-purple-300 hover:text-white";*/
+  const handleCrearResena = () => {
+    if (!isAuthenticated) {
+      // 👇  NO está autenticado, mostrar modal de login
+      setShowLogin(true);
+    } else {
+      // 👇  SÍ está autenticado, redirigir a reseñas
+      navigate("/resenas");
+    }
+  };
 
   return (
     <>
       <main className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)] relative">
         <div className="container mx-auto px-4 py-6">
-          
-
           {/* Contenido principal */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="max-w-md">
@@ -41,7 +46,7 @@ export default function Home() {
                 </Button>
 
                 <Button
-                  onClick={() => navigate("/resenas")}
+                  onClick={handleCrearResena} 
                   className="bg-gradient-to-r from-pink-400 to-purple-500 hover:opacity-90 text-white px-10 py-6 text-xl rounded-xl"
                 >
                   Crear Reseña
@@ -122,7 +127,16 @@ export default function Home() {
         </div>
       </main>
 
-      
+      {/*  Modal de Login que se muestra si no está autenticado */}
+      {showLogin && (
+        <Login 
+          onClose={() => setShowLogin(false)}
+          onSwitchToRegister={() => {
+            setShowLogin(false);
+
+          }}
+        />
+      )}
     </>
   );
 }

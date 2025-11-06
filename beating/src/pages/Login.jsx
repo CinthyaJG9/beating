@@ -2,12 +2,18 @@ import { Button } from "./../components/ui/button";
 import { Input } from "../components/ui/input";
 import { X } from "lucide-react";
 import React, { useState } from "react";
+import { useAuth } from "../pages/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Login({ onClose, onSwitchToRegister }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const { login } = useAuth();
+
 
   const handleLogin = async () => {
     setLoading(true);
@@ -28,21 +34,20 @@ export default function Login({ onClose, onSwitchToRegister }) {
       const data = await response.json();
 
       if (response.ok) {
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user_id', data.user_id);
-          localStorage.setItem('username', data.username);
-          
-          // Cierra el modal primero
-          if (typeof onClose === 'function') {
-            onClose();
-          }
-          
-          // Redirige a /resenas después de cerrar el modal
-          setTimeout(() => {
-            window.location.href = '/resenas';
-          }, 100);
-        }
+        console.log('Respuesta del login:', data);
+        
+        const userData = {
+          id: data.user?.id || data.user_id || data.id,
+          username: data.user?.username || data.user?.email || data.username || email.split('@')[0]
+        };
+
+        login(data.token, userData);
+        
+        if (onClose) onClose();
+        
+        // 👇 REDIRIGIR A RESEÑAS DESPUÉS DEL LOGIN
+        navigate('/resenas');
+        
       } else {
         setError(data.error || 'Error en las credenciales');
       }

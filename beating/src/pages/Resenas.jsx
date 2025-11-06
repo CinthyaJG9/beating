@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Tabs } from '../components/Tabs';
 import { Tab } from '../components/Tab';
 import { Pagination } from '../components/Pagination';
+import { useAuth } from '../pages/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 const Resenas = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,9 +19,45 @@ const Resenas = () => {
   const [activeTab, setActiveTab] = useState('search');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+ 
   
   const tracksPerPage = 10;
   const navigate = useNavigate();
+  const { isAuthenticated, logout } = useAuth(); 
+  const location = useLocation();
+
+    useEffect(() => {
+    if (location.state?.selectedSong || location.state?.spotifySong) {
+      const songData = location.state.selectedSong || location.state.spotifySong;
+      
+      // Crear un track simulado para usar en el componente
+      const simulatedTrack = {
+        id: songData.id || `spotify-${songData.spotifyId}`,
+        name: songData.name,
+        artists: [songData.artist],
+        album: songData.album,
+        album_image: songData.image,
+        is_top_track: false,
+        preview_url: null
+      };
+
+      // Crear un artista simulado
+      const simulatedArtist = {
+        id: `artist-${Date.now()}`,
+        name: songData.artist,
+        image: songData.image,
+        genres: [],
+        followers: 0
+      };
+
+      setSelectedArtist(simulatedArtist);
+      setSelectedTrack(simulatedTrack);
+      setActiveTab('review');
+      
+      // Limpiar el state de navegación para evitar que se repita
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Buscar artistas
   const searchArtists = async () => {
@@ -117,7 +155,7 @@ const Resenas = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
+      if (!isAuthenticated) {
         setMessage('No estás autenticado. Por favor inicia sesión.');
         return navigate('/login');
       }
@@ -160,7 +198,7 @@ const Resenas = () => {
   const crearPlaylistSpotify = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
+      if (!isAuthenticated) {
         setMessage('Debes iniciar sesión primero');
         navigate('/login');
         return;
@@ -223,14 +261,14 @@ const Resenas = () => {
         <div className="mb-8 bg-white/5 rounded-2xl backdrop-blur-sm border border-white/10 overflow-hidden">
           <Tabs>
             <Tab 
-              active={activeTab === 'search'} 
+              isActive={activeTab === 'search'} 
               onClick={() => setActiveTab('search')}
               className="text-white"
             >
               Buscar Artista
             </Tab>
             <Tab 
-              active={activeTab === 'artists' && artists.length > 0} 
+              isActive={activeTab === 'artists' && artists.length > 0} 
               onClick={() => artists.length > 0 && setActiveTab('artists')}
               disabled={artists.length === 0}
               className="text-white"
@@ -238,7 +276,7 @@ const Resenas = () => {
               Artistas
             </Tab>
             <Tab 
-              active={activeTab === 'tracks' && tracks.length > 0} 
+              isActive={activeTab === 'tracks' && tracks.length > 0} 
               onClick={() => tracks.length > 0 && setActiveTab('tracks')}
               disabled={tracks.length === 0}
               className="text-white"
@@ -246,7 +284,7 @@ const Resenas = () => {
               Canciones
             </Tab>
             <Tab 
-              active={activeTab === 'review' && selectedTrack} 
+              isActive={activeTab === 'review' && selectedTrack} 
               onClick={() => selectedTrack && setActiveTab('review')}
               disabled={!selectedTrack}
               className="text-white"

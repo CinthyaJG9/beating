@@ -3,7 +3,7 @@ import React from 'react';
 
 export function Tab({ 
   children, 
-  active = false, 
+  isActive = false, //recibes
   disabled = false, 
   onClick, 
   className = '',
@@ -20,7 +20,7 @@ export function Tab({
       onClick={handleClick}
       disabled={disabled}
       className={`px-6 py-3 text-lg font-medium rounded-t-lg transition-all duration-200 focus:outline-none ${
-        active
+        isActive //  'active' por 'isActive'
           ? 'text-[#e900ff] border-b-2 border-[#e900ff] bg-[#140a14b0]'
           : disabled
           ? 'text-gray-500 cursor-not-allowed'

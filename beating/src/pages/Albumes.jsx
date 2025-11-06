@@ -4,15 +4,18 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { useNavigate } from "react-router-dom";
 import Login from "./Login";
+import { useAuth } from "../pages/AuthContext";
 
 export default function Albumes() {
   const [showLogin, setShowLogin] = useState(false);
   const [search, setSearch] = useState("");
   const [albumes, setAlbumes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [userLoggedIn, setUserLoggedIn] = useState(false);
+
   const [albumSeleccionado, setAlbumSeleccionado] = useState(null); // 👈 Para mostrar detalles
   const navigate = useNavigate();
+
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const buscarAlbumes = async () => {
@@ -56,7 +59,7 @@ export default function Albumes() {
   };
 
   const handleCrearResena = async (album) => {
-    if (!userLoggedIn) {
+    if (!isAuthenticated) {
       setShowLogin(true);
       return;
     }
