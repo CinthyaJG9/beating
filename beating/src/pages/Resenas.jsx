@@ -7,6 +7,7 @@ import { Pagination } from '../components/Pagination';
 import { useAuth } from '../pages/AuthContext';
 import { useLocation } from 'react-router-dom';
 
+
 const Resenas = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [artists, setArtists] = useState([]);
@@ -194,41 +195,86 @@ const Resenas = () => {
     }
   };
 
-  // Crear playlist en Spotify
-  const crearPlaylistSpotify = async () => {
+const crearPlaylistSpotify = async () => {
+  try {
+    setLoading(true);
+    setMessage('🎵 Buscando tus canciones más positivas...');
+
+    // 1. Primero probar conexión básica
     try {
-      const token = localStorage.getItem('token');
-      if (!isAuthenticated) {
-        setMessage('Debes iniciar sesión primero');
-        navigate('/login');
+      console.log('🔍 Probando conexión con el servidor...');
+      const healthResponse = await fetch('http://localhost:5000/health', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (healthResponse.ok) {
+        console.log('✅ Servidor conectado correctamente');
+      } else {
+        setMessage('❌ Servidor no responde correctamente');
+        setLoading(false);
         return;
       }
-
-      setLoading(true);
-      setMessage('Creando playlist...');
-      
-      const response = await axios.post(
-        'http://localhost:5000/crear_playlist',
-        {},
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      setMessage(response.data.message);
-      if (response.data.playlist_url) {
-        window.open(response.data.playlist_url, '_blank');
-      }
-    } catch (error) {
-      setMessage(error.response?.data?.error || 'Error al crear la playlist');
-      console.error('Error al crear playlist:', error);
-    } finally {
+    } catch (healthError) {
+      setMessage('❌ No se puede conectar al servidor');
       setLoading(false);
+      return;
     }
-  };
+
+    // 2. Crear playlist CON CANCIONES POSITIVAS
+    console.log('📨 Creando playlist con canciones positivas...');
+    
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:5000/create-playlist', { // 👈 CAMBIAR AQUÍ
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+      // ❌ NO ENVIAR name/description aquí - el backend ya los tiene definidos
+    });
+
+    console.log('📊 Estado de la respuesta:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Respuesta del servidor:', data);
+
+    if (data.action_required === "spotify_auth") {
+      setMessage('🔑 Redirigiendo a Spotify para autenticación...');
+      setTimeout(() => {
+        window.location.href = data.auth_url;
+      }, 1000);
+    } else if (data.message) {
+      setMessage(`✅ ${data.message}`);
+      if (data.playlist_url) {
+        setTimeout(() => {
+          window.open(data.playlist_url, '_blank');
+        }, 1500);
+      }
+    } else {
+      setMessage('❌ Respuesta inesperada del servidor');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error completo:', error);
+    
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      setMessage('🌐 Error de red: No se pudo conectar al servidor');
+    } else if (error.message.includes('HTTP error')) {
+      setMessage(`❌ Error del servidor: ${error.message}`);
+    } else {
+      setMessage(`❌ Error: ${error.message}`);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Paginación
   const indexOfLastTrack = currentPage * tracksPerPage;

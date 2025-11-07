@@ -1,8 +1,5 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
+from flask import Flask, jsonify, request  # 👈 Añadir 'request' aquí
 from config import APP_CONFIG
-#from profileB import profileB_routes
-from auth.routes import init_auth_routes
 
 # Importar módulos
 from database.connection import db
@@ -21,7 +18,27 @@ from listas.routes import init_listas_routes
 from seguimientos.routes import init_seguimientos_routes
 
 app = Flask(__name__)
-CORS(app)
+
+# 🔧 CONFIGURACIÓN CORREGIDA DE CORS
+@app.after_request
+def after_request(response):
+    """Añadir headers CORS SOLO UNA VEZ"""
+    response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5173'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+@app.before_request
+def handle_preflight():
+    """Manejar OPTIONS requests - CORREGIDO"""
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "preflight"})
+        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5173'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response
 
 # Configurar app
 app.config['SECRET_KEY'] = APP_CONFIG['secret_key']
@@ -40,40 +57,38 @@ init_resenas_routes(app)
 init_listas_routes(app)
 init_seguimientos_routes(app)
 
-# Rutas básicas
+# 🏠 Rutas básicas
 @app.route('/')
 def home():
     return jsonify({
-        "message": "Beating API está funcionando", 
+        "message": "🎵 Beating API está funcionando", 
         "status": "OK",
-        "spotify_authenticated": spotify_client.sp_user is not None,
-        "database_connected": db.pool is not None
+        "cors": "fixed"
     })
 
-@app.route('/test-db')
-def test_db():
-    try:
-        conn = db.get_connection()
-        if conn:
-            cur = conn.cursor()
-            cur.execute("SELECT version()")
-            version = cur.fetchone()
-            cur.close()
-            db.close_connection(conn)
-            return jsonify({"database": "Conectado", "version": version[0]})
-        else:
-            return jsonify({"database": "Error de conexión"})
-    except Exception as e:
-        return jsonify({"database": f"Error: {str(e)}"})
+@app.route('/health')
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "server": "running"
+    })
+
 
 if __name__ == '__main__':
     print("🚀 Iniciando servidor Beating...")
+    print("=" * 50)
     print(f"📊 Base de datos: {'✅ Conectada' if db.pool else '❌ Error'}")
-    print(f"🎵 Spotify: {'✅ Configurado' if spotify_client.sp_search else '❌ Error'}")
-    print(f"🔐 Spotify User: {'✅ Autenticado' if spotify_client.sp_user else '⚠️ Necesita autenticación'}")
+    print(f"🎵 Spotify Search: {'✅ Configurado' if spotify_client.sp_search else '❌ Error'}")
+    print(f"🔐 Spotify User: {'✅ Autenticado' if spotify_client.sp_user else '⚠️  Necesita autenticación'}")
+    print(f"🌐 CORS: ✅ Configurado para http://localhost:5173")
+    print(f"🔧 Debug: {'✅ Activado' if APP_CONFIG['debug'] else '❌ Desactivado'}")
     print(f"🌐 Servidor corriendo en: http://localhost:{APP_CONFIG['port']}")
+    print("=" * 50)
     
-    app.run(
-        debug=APP_CONFIG['debug'], 
-        port=APP_CONFIG['port']
-    )
+# En app.py, cambia esta línea:
+app.run(
+    debug=APP_CONFIG['debug'], 
+    port=APP_CONFIG['port'],
+    host='localhost',  # 👈 CAMBIAR a 'localhost'
+    threaded=True
+)

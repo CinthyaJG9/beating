@@ -13,13 +13,18 @@ class SpotifyClient:
     def init_clients(self):
         # Cliente para autenticación de usuario
         try:
+            # 🔥 CORREGIR: Usar LOCALHOST y el puerto correcto
+            redirect_uri = "http://localhost:5000/callback"  # 👈 CAMBIAR AQUÍ
+            
             self.sp_oauth = SpotifyOAuth(
                 client_id=SPOTIFY_CONFIG['client_id'],
                 client_secret=SPOTIFY_CONFIG['client_secret'],
-                redirect_uri=SPOTIFY_CONFIG['redirect_uri'],
+                redirect_uri=redirect_uri,
                 scope=SPOTIFY_CONFIG['scope'],
                 open_browser=False
             )
+            
+            print(f"🔗 Spotify OAuth configurado con Redirect URI: {self.sp_oauth.redirect_uri}")
             
             token_info = self.sp_oauth.get_cached_token()
             if token_info:

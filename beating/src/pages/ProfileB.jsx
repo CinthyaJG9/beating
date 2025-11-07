@@ -127,20 +127,7 @@ export default function ProfileB() {
   return (
       <main className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)] text-white">
         <div className="container mx-auto px-6 py-10">
-          {/* Header */}
-          <header className="flex justify-between items-center mb-12">
-            {/* Este h1 se puede quitar si ya está en el Navbar, pero lo dejamos por si acaso */}
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Beating
-            </h1>
-            <Button
-              variant="outline"
-              className="border-white text-white hover:bg-white/10"
-              onClick={handleLogout}
-            >
-              Cerrar sesión
-            </Button>
-          </header>
+
 
           {/* Info del usuario */}
           <section className="flex flex-col items-center mb-12">
