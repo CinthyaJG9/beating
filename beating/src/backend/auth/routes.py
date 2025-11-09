@@ -59,25 +59,48 @@ def init_auth_routes(app):
             conn = db.get_connection()
             if not conn:
                 return jsonify({"error": "Error de conexión a la base de datos"}), 500
-                
+
             cur = conn.cursor()
 
-            cur.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
+            # ✅ Validar que no exista el correo
+            cur.execute("SELECT id_usuario FROM usuarios WHERE correo = %s", (correo,))
             if cur.fetchone():
                 cur.close()
                 db.close_connection(conn)
                 return jsonify({"error": "Correo ya registrado"}), 409
 
+            # ✅ Insertar nuevo usuario
             cur.execute(
                 "INSERT INTO usuarios (nombre_usuario, correo, contrasena) VALUES (%s, %s, %s) RETURNING id_usuario",
                 (nombre, correo, contrasena)
             )
             user_id = cur.fetchone()[0]
             conn.commit()
+
+            # ✅ Cerrar cursor antes de generar token
             cur.close()
             db.close_connection(conn)
 
-            return jsonify({"message": "Usuario registrado", "user_id": user_id}), 201
+            # ✅ Crear token igual que en login
+            payload = {
+                "user_id": user_id,
+                "username": nombre,
+                "email": correo,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+            }
+
+            token = jwt.encode(payload, APP_CONFIG['secret_key'], algorithm="HS256")
+
+            # ✅ Respuesta compatible con tu AuthContext
+            return jsonify({
+                "message": "Usuario registrado",
+                "token": token,
+                "user": {
+                    "id": user_id,
+                    "nombre_usuario": nombre,
+                    "correo": correo
+                }
+            }), 201
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
