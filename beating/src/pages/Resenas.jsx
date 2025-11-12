@@ -7,13 +7,13 @@ import { Pagination } from '../components/Pagination';
 import { useAuth } from '../pages/AuthContext';
 import { useLocation } from 'react-router-dom';
 
-
 const Resenas = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [artists, setArtists] = useState([]);
   const [selectedArtist, setSelectedArtist] = useState(null);
   const [tracks, setTracks] = useState([]);
   const [selectedTrack, setSelectedTrack] = useState(null);
+  const [selectedAlbum, setSelectedAlbum] = useState(null); // 👈 ESTADO AGREGADO
   const [review, setReview] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -21,39 +21,68 @@ const Resenas = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
  
-  
   const tracksPerPage = 10;
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth(); 
   const location = useLocation();
 
-    useEffect(() => {
-    if (location.state?.selectedSong || location.state?.spotifySong) {
-      const songData = location.state.selectedSong || location.state.spotifySong;
+  useEffect(() => {
+    if (location.state?.selectedSong || location.state?.spotifySong || 
+        location.state?.selectedAlbum || location.state?.spotifyAlbum) {
       
-      // Crear un track simulado para usar en el componente
-      const simulatedTrack = {
-        id: songData.id || `spotify-${songData.spotifyId}`,
-        name: songData.name,
-        artists: [songData.artist],
-        album: songData.album,
-        album_image: songData.image,
-        is_top_track: false,
-        preview_url: null
-      };
+      // Manejar canción
+      if (location.state.selectedSong || location.state.spotifySong) {
+        const songData = location.state.selectedSong || location.state.spotifySong;
+        
+        const simulatedTrack = {
+          id: songData.id || `spotify-${songData.spotifyId}`,
+          name: songData.name,
+          artists: [songData.artist],
+          album: songData.album,
+          album_image: songData.image,
+          is_top_track: false,
+          preview_url: null
+        };
 
-      // Crear un artista simulado
-      const simulatedArtist = {
-        id: `artist-${Date.now()}`,
-        name: songData.artist,
-        image: songData.image,
-        genres: [],
-        followers: 0
-      };
+        const simulatedArtist = {
+          id: `artist-${Date.now()}`,
+          name: songData.artist,
+          image: songData.image,
+          genres: [],
+          followers: 0
+        };
 
-      setSelectedArtist(simulatedArtist);
-      setSelectedTrack(simulatedTrack);
-      setActiveTab('review');
+        setSelectedArtist(simulatedArtist);
+        setSelectedTrack(simulatedTrack);
+        setSelectedAlbum(null); // 👈 Limpiar álbum
+        setActiveTab('review');
+      }
+      
+      // Manejar álbum
+      if (location.state.selectedAlbum || location.state.spotifyAlbum) {
+        const albumData = location.state.selectedAlbum || location.state.spotifyAlbum;
+        
+        const simulatedAlbum = {
+          id: albumData.id || `spotify-${albumData.spotifyId}`,
+          name: albumData.name,
+          artist: albumData.artist,
+          image: albumData.image,
+          year: albumData.year
+        };
+
+        const simulatedArtist = {
+          id: `artist-${Date.now()}`,
+          name: albumData.artist,
+          image: albumData.image,
+          genres: [],
+          followers: 0
+        };
+
+        setSelectedArtist(simulatedArtist);
+        setSelectedAlbum(simulatedAlbum);
+        setSelectedTrack(null); // 👈 Limpiar canción
+        setActiveTab('review');
+      }
       
       // Limpiar el state de navegación para evitar que se repita
       window.history.replaceState({}, document.title);
@@ -74,6 +103,7 @@ const Resenas = () => {
     setSelectedArtist(null);
     setTracks([]);
     setSelectedTrack(null);
+    setSelectedAlbum(null); // 👈 Limpiar álbum también
     
     try {
       const response = await axios.get(`http://localhost:5000/buscar-artista?q=${encodeURIComponent(searchTerm)}`, {
@@ -107,6 +137,7 @@ const Resenas = () => {
     setLoading(true);
     setTracks([]);
     setSelectedTrack(null);
+    setSelectedAlbum(null); // 👈 Limpiar álbum
     setCurrentPage(1);
     
     try {
@@ -144,8 +175,8 @@ const Resenas = () => {
 
   const submitReview = async (e) => {
     e.preventDefault();
-    if (!selectedTrack) {
-      setMessage('Por favor selecciona una canción');
+    if (!selectedTrack && !selectedAlbum) {
+      setMessage('Por favor selecciona una canción o álbum');
       return;
     }
     if (!review.trim()) {
@@ -161,14 +192,16 @@ const Resenas = () => {
         return navigate('/login');
       }
 
+      const reviewData = {
+        nombre: selectedTrack ? selectedTrack.name : selectedAlbum.name,
+        artista: selectedArtist?.name || (selectedTrack ? selectedTrack.artists.join(', ') : selectedAlbum.artist),
+        contenido: review,
+        tipo: selectedTrack ? 'cancion' : 'album'
+      };
+
       await axios.post(
         'http://localhost:5000/resenas',
-        {
-          nombre: selectedTrack.name,
-          artista: selectedArtist?.name || selectedTrack.artists.join(', '),
-          contenido: review,
-          tipo: 'cancion'
-        },
+        reviewData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -180,6 +213,7 @@ const Resenas = () => {
       setMessage('¡Reseña enviada con éxito!');
       setReview('');
       setSelectedTrack(null);
+      setSelectedAlbum(null);
       setActiveTab('tracks');
     } catch (error) {
       if (error.response?.status === 401) {
@@ -195,86 +229,85 @@ const Resenas = () => {
     }
   };
 
-const crearPlaylistSpotify = async () => {
-  try {
-    setLoading(true);
-    setMessage('🎵 Buscando tus canciones más positivas...');
-
-    // 1. Primero probar conexión básica
+  const crearPlaylistSpotify = async () => {
     try {
-      console.log('🔍 Probando conexión con el servidor...');
-      const healthResponse = await fetch('http://localhost:5000/health', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      setLoading(true);
+      setMessage('🎵 Buscando tus canciones más positivas...');
+
+      // 1. Primero probar conexión básica
+      try {
+        console.log('🔍 Probando conexión con el servidor...');
+        const healthResponse = await fetch('http://localhost:5000/health', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (healthResponse.ok) {
+          console.log('✅ Servidor conectado correctamente');
+        } else {
+          setMessage('❌ Servidor no responde correctamente');
+          setLoading(false);
+          return;
         }
-      });
-      
-      if (healthResponse.ok) {
-        console.log('✅ Servidor conectado correctamente');
-      } else {
-        setMessage('❌ Servidor no responde correctamente');
+      } catch (healthError) {
+        setMessage('❌ No se puede conectar al servidor');
         setLoading(false);
         return;
       }
-    } catch (healthError) {
-      setMessage('❌ No se puede conectar al servidor');
-      setLoading(false);
-      return;
-    }
 
-    // 2. Crear playlist CON CANCIONES POSITIVAS
-    console.log('📨 Creando playlist con canciones positivas...');
-    
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/create-playlist', { // 👈 CAMBIAR AQUÍ
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+      // 2. Crear playlist CON CANCIONES POSITIVAS
+      console.log('📨 Creando playlist con canciones positivas...');
+      
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/create-playlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      console.log('📊 Estado de la respuesta:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      // ❌ NO ENVIAR name/description aquí - el backend ya los tiene definidos
-    });
 
-    console.log('📊 Estado de la respuesta:', response.status);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+      const data = await response.json();
+      console.log('✅ Respuesta del servidor:', data);
 
-    const data = await response.json();
-    console.log('✅ Respuesta del servidor:', data);
-
-    if (data.action_required === "spotify_auth") {
-      setMessage('🔑 Redirigiendo a Spotify para autenticación...');
-      setTimeout(() => {
-        window.location.href = data.auth_url;
-      }, 1000);
-    } else if (data.message) {
-      setMessage(`✅ ${data.message}`);
-      if (data.playlist_url) {
+      if (data.action_required === "spotify_auth") {
+        setMessage('🔑 Redirigiendo a Spotify para autenticación...');
         setTimeout(() => {
-          window.open(data.playlist_url, '_blank');
-        }, 1500);
+          window.location.href = data.auth_url;
+        }, 1000);
+      } else if (data.message) {
+        setMessage(`✅ ${data.message}`);
+        if (data.playlist_url) {
+          setTimeout(() => {
+            window.open(data.playlist_url, '_blank');
+          }, 1500);
+        }
+      } else {
+        setMessage('❌ Respuesta inesperada del servidor');
       }
-    } else {
-      setMessage('❌ Respuesta inesperada del servidor');
+      
+    } catch (error) {
+      console.error('❌ Error completo:', error);
+      
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        setMessage('🌐 Error de red: No se pudo conectar al servidor');
+      } else if (error.message.includes('HTTP error')) {
+        setMessage(`❌ Error del servidor: ${error.message}`);
+      } else {
+        setMessage(`❌ Error: ${error.message}`);
+      }
+    } finally {
+      setLoading(false);
     }
-    
-  } catch (error) {
-    console.error('❌ Error completo:', error);
-    
-    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-      setMessage('🌐 Error de red: No se pudo conectar al servidor');
-    } else if (error.message.includes('HTTP error')) {
-      setMessage(`❌ Error del servidor: ${error.message}`);
-    } else {
-      setMessage(`❌ Error: ${error.message}`);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Paginación
   const indexOfLastTrack = currentPage * tracksPerPage;
@@ -330,9 +363,9 @@ const crearPlaylistSpotify = async () => {
               Canciones
             </Tab>
             <Tab 
-              isActive={activeTab === 'review' && selectedTrack} 
-              onClick={() => selectedTrack && setActiveTab('review')}
-              disabled={!selectedTrack}
+              isActive={activeTab === 'review' && (selectedTrack || selectedAlbum)} // 👈 ACTUALIZADO
+              onClick={() => (selectedTrack || selectedAlbum) && setActiveTab('review')}
+              disabled={!selectedTrack && !selectedAlbum} // 👈 ACTUALIZADO
               className="text-white"
             >
               Escribir Reseña
@@ -452,6 +485,7 @@ const crearPlaylistSpotify = async () => {
                       key={track.id}
                       onClick={() => {
                         setSelectedTrack(track);
+                        setSelectedAlbum(null); // 👈 Limpiar álbum
                         setActiveTab('review');
                       }}
                       className={`p-4 rounded-xl cursor-pointer transition-all flex items-center gap-4 group ${
@@ -512,23 +546,28 @@ const crearPlaylistSpotify = async () => {
             </div>
           )}
 
-          {/* Pestaña de reseña */}
-          {activeTab === 'review' && selectedTrack && (
+          {/* Pestaña de reseña - ACTUALIZADA para manejar tanto canciones como álbumes */}
+          {activeTab === 'review' && (selectedTrack || selectedAlbum) && (
             <div className="space-y-6">
-              {/* Header de la canción */}
+              {/* Header de la canción o álbum */}
               <div className="flex items-center gap-6 mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
-                {selectedTrack.album_image && (
+                {(selectedTrack?.album_image || selectedAlbum?.image) && (
                   <img 
-                    src={selectedTrack.album_image} 
-                    alt={selectedTrack.album}
+                    src={selectedTrack?.album_image || selectedAlbum?.image} 
+                    alt={selectedTrack?.album || selectedAlbum?.name}
                     className="w-20 h-20 rounded-xl object-cover border-2 border-purple-400/50"
                   />
                 )}
                 <div>
                   <h2 className="text-3xl font-bold text-white mb-2">Escribe tu reseña</h2>
                   <p className="text-lg text-purple-300">
-                    {selectedTrack.name} • {selectedTrack.artists.join(', ')}
+                    {selectedTrack ? selectedTrack.name : selectedAlbum.name} • {selectedTrack ? selectedTrack.artists.join(', ') : selectedAlbum.artist}
                   </p>
+                  {selectedAlbum && (
+                    <p className="text-sm text-gray-400 mt-1">
+                      💿 Álbum
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -541,7 +580,11 @@ const crearPlaylistSpotify = async () => {
                     id="review"
                     value={review}
                     onChange={(e) => setReview(e.target.value)}
-                    placeholder="¿Qué te parece esta canción? ¿Qué emociones te transmite? ¿Qué recuerdos evoca?..."
+                    placeholder={
+                      selectedTrack 
+                        ? "¿Qué te parece esta canción? ¿Qué emociones te transmite? ¿Qué recuerdos evoca?..."
+                        : "¿Qué te parece este álbum? ¿Cómo es la experiencia completa? ¿Cuáles son tus canciones favoritas?..."
+                    }
                     rows="8"
                     className="w-full p-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all resize-none"
                     required
@@ -551,10 +594,14 @@ const crearPlaylistSpotify = async () => {
                 <div className="flex justify-end gap-4">
                   <button
                     type="button"
-                    onClick={() => setActiveTab('tracks')}
+                    onClick={() => {
+                      setActiveTab('tracks');
+                      setSelectedTrack(null);
+                      setSelectedAlbum(null);
+                    }}
                     className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-xl font-medium transition-all border border-white/20"
                   >
-                    Volver a Canciones
+                    Volver
                   </button>
                   <button
                     type="submit"

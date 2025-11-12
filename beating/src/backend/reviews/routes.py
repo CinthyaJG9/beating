@@ -428,7 +428,48 @@ def init_reviews_routes(app):
                     """, (user_id, id_cancion, contenido))
 
                 elif tipo == "album":
-                    return jsonify({"error": "Funcionalidad para álbumes no implementada aún"}), 501
+                    if not spotify_client.sp_search:
+                        return jsonify({"error": "Servicio de búsqueda no disponible"}), 500
+                        
+                    results = spotify_client.sp_search.search(q=f"{nombre} {artista}", type="album", limit=1)
+                    if not results['albums']['items']:
+                        return jsonify({"error": "Álbum no encontrado en Spotify"}), 404
+
+                    album = results['albums']['items'][0]
+                    titulo = album['name']
+                    artista_spotify = album['artists'][0]['name']
+                    fecha_lanzamiento = album['release_date']
+                    
+                    # Extraer año de lanzamiento
+                    anio_lanzamiento = fecha_lanzamiento[:4] if fecha_lanzamiento else None
+
+                    cur.execute("SELECT id_album FROM albumes WHERE titulo = %s AND artista = %s", 
+                            (titulo, artista_spotify))
+                    album_db = cur.fetchone()
+
+                    if album_db:
+                        id_album = album_db[0]
+                        # Actualizar información si es necesario
+                        cur.execute("""
+                            UPDATE albumes SET
+                                anio_lanzamiento = %s
+                            WHERE id_album = %s
+                        """, (anio_lanzamiento, id_album))
+                    else:
+                        cur.execute("""
+                            INSERT INTO albumes 
+                            (titulo, artista, anio_lanzamiento) 
+                            VALUES (%s, %s, %s)
+                            RETURNING id_album
+                        """, (titulo, artista_spotify, anio_lanzamiento))
+                        id_album = cur.fetchone()[0]
+
+                    cur.execute("""
+                        INSERT INTO resenas 
+                        (id_usuario, id_album, texto_resena) 
+                        VALUES (%s, %s, %s)
+                        RETURNING id_resena
+                    """, (user_id, id_album, contenido))
 
                 id_resena = cur.fetchone()[0]
 
@@ -447,7 +488,8 @@ def init_reviews_routes(app):
                         - Sentimiento: {sentimiento}
                         - Puntuación: {puntuacion}
                         - Tipo: {tipo}
-                        - Artista: {artista_spotify if tipo == 'cancion' else artista}
+                        - Artista: {artista_spotify}
+                        - Título: {titulo}
                     """)
                 except:
                     print(f"Reseña registrada: {contenido[:50]}... - {sentimiento}")
@@ -459,8 +501,8 @@ def init_reviews_routes(app):
                         "sentimiento": sentimiento,
                         "puntuacion": puntuacion,
                         "tipo": tipo,
-                        "artista": artista_spotify if tipo == "cancion" else artista,
-                        "titulo": titulo if tipo == "cancion" else nombre,
+                        "artista": artista_spotify,
+                        "titulo": titulo,
                         "modelo": "beto-sentiment-analysis"
                     }
                 }), 201
