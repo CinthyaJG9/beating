@@ -52,7 +52,7 @@ def generar_wordcloud_beating(textos):
 
     # Procesar texto con spaCy - enfoque en las palabras más significativas
     doc = nlp(texto_completo) 
-    allowed_pos = {'ADJ', 'NOUN'}  # Solo adjetivos y sustantivos para palabras más relevantes
+    allowed_pos = {'ADJ', 'VERB'}  # Solo adjetivos y sustantivos para palabras más relevantes
     
     filtered_words = [
         token.lemma_.lower()
@@ -84,7 +84,8 @@ def generar_wordcloud_beating(textos):
         'ritmo', 'melodia', 'melodía', 'verso', 'coro', 'estribillo',
         'hacer', 'tener', 'poder', 'decir', 'ver', 'dar', 'saber', 'ir',
         'ser', 'estar', 'haber', 'poder', 'querer', 'parecer', 'gente',
-        'tiempo', 'vez', 'parte', 'forma', 'caso', 'manera', 'momento'
+        'tiempo', 'vez', 'parte', 'forma', 'caso', 'manera', 'momento','instrumento',
+        'sicario', 'llegadoro', 'mediocre', 'melancolía' 
     }
     
     all_stopwords = spanish_stopwords.union(domain_stopwords)

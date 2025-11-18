@@ -1,142 +1,133 @@
-// src/pages/Home.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from 'axios';
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../pages/AuthContext"; 
-import Login from "./Login"; // 
+import Login from "./Login"; 
+
+const baseCardStyle = "bg-gradient-to-b from-purple-500 to-blue-500 rounded-xl shadow-xl";
+
+const HomeWordCloudContainer = () => {
+    const [wordcloudImage, setWordcloudImage] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchWordCloud = async () => {
+            try {
+                // Llama al endpoint de análisis (devuelve BASE64)
+                const response = await axios.get('http://localhost:5000/analisis-resenas'); 
+                
+                if (response.data && response.data.wordcloud) {
+                    // Usa la imagen Base64
+                    setWordcloudImage(`data:image/png;base64,${response.data.wordcloud}`);
+                } else {
+                    setError("Nube de palabras no disponible.");
+                }
+            } catch (err) {
+                console.error("Error fetching wordcloud:", err);
+                setError("Error al cargar datos del servidor.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchWordCloud();
+    }, []);
+
+    // Manejo de carga
+    if (loading) {
+        return (
+            // 🛑 APLICAR DIMENSIONES AL PADRE: w-full h-full
+            <div className={`w-full h-full ${baseCardStyle} flex items-center justify-center`}>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/80"></div>
+            </div>
+        );
+    }
+    
+    // Fallback si hay error o no hay imagen
+    if (error || !wordcloudImage) {
+        return (
+            <div className={`w-full h-full text-center ${baseCardStyle} flex flex-col items-center justify-center p-4`}>
+                <p className="text-sm font-semibold text-white/90">Análisis No Disponible</p>
+                <p className="text-xs text-white/70">Aún no hay suficientes reseñas.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`w-full h-full ${baseCardStyle} overflow-hidden`}>
+            <div className="p-0 h-full flex items-center justify-center bg-black/50">
+                <img
+                    src={wordcloudImage}
+                    alt="Nube de palabras de la comunidad"
+                    className="w-full h-full object-contain" 
+                />
+            </div>
+        </div>
+    );
+};
 
 export default function Home() {
-  const [showLogin, setShowLogin] = useState(false);
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth(); // 👈 Obtener estado de autenticación
+	const [showLogin, setShowLogin] = useState(false);
+	const navigate = useNavigate();
+	const { isAuthenticated } = useAuth(); 
 
-  const handleCrearResena = () => {
-    if (!isAuthenticated) {
-      // 👇  NO está autenticado, mostrar modal de login
-      setShowLogin(true);
-    } else {
-      // 👇  SÍ está autenticado, redirigir a reseñas
-      navigate("/resenas");
-    }
-  };
+	const handleCrearResena = () => {
+		if (!isAuthenticated) {
+			setShowLogin(true);
+		} else {
+			navigate("/resenas");
+		}
+	};
 
-  return (
-    <>
-      <main className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)] relative">
-        <div className="container mx-auto px-4 py-6">
-          {/* Contenido principal */}
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="max-w-md">
-              <h2 className="text-5xl font-bold text-white mb-2">
-                Donde tus emociones{" "}
-                <span className="text-purple-300">se convierten</span> en música
-              </h2>
-              <p className="text-sm text-gray-400 mb-8">
-                Analizamos tus sentimientos en reseñas musicales para crear
-                playlists que realmente conecten contigo.
-              </p>
+	return (
+		<>
+			<main className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)] relative">
+				<div className="container mx-auto px-4 py-6">
+					{/* Contenido principal */}
+					<div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-0 pb-10">
+						<div className="max-w-md">
+							<h2 className="text-5xl font-bold text-white mb-2">
+								Donde tus emociones{" "}
+								<span className="text-purple-300">se convierten</span> en música
+							</h2>
+							{/* Se mantuvo mb-6 */}
+							<p className="text-sm text-gray-400 mb-6">
+								Analizamos tus sentimientos en reseñas musicales para crear
+								playlists que realmente conecten contigo.
+							</p>
 
-              <div className="flex gap-4">
-                <Button
-                  onClick={() => navigate("/explora")}
-                  className="bg-gradient-to-r from-blue-400 to-purple-400 hover:opacity-90 text-white px-10 py-6 text-xl rounded-xl"
-                >
-                  Explorar
-                </Button>
+							<div className="flex gap-4">
+								<Button
+									onClick={() => navigate('/comunidad')}
+									className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-8 py-4 text-xl font-bold rounded-xl shadow-lg hover:shadow-purple-500/50 transition-all duration-300 transform hover:scale-105"
+								>
+									Comunidad
+								</Button>
+							</div>
+						</div>
 
-                <Button
-                  onClick={handleCrearResena} 
-                  className="bg-gradient-to-r from-pink-400 to-purple-500 hover:opacity-90 text-white px-10 py-6 text-xl rounded-xl"
-                >
-                  Crear Reseña
-                </Button>
-              </div>
-            </div>
+						{/* INTEGRACIÓN DEL COMPONENTE DE CARGA */}
+						<div className="relative w-[32rem] h-[28rem] flex items-center justify-center">
+							<div className="absolute right-0 top-0 z-10 hover:rotate-6 transition-transform duration-600">
+								<HomeWordCloudContainer />
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
 
-            {/* Logo visual (mantiene estilo original) */}
-            <div className="relative w-72 h-80">
-              <div className="absolute right-0 top-0 rotate-6 z-10">
-                <Card className="w-64 h-72 bg-gradient-to-b from-purple-400 to-blue-400 rounded-xl shadow-xl">
-                  <CardContent className="flex flex-col items-center justify-center h-full p-6">
-                    <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center mb-4">
-                      <svg
-                        width="80"
-                        height="40"
-                        viewBox="0 0 120 40"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <defs>
-                          <linearGradient
-                            id="waveGradient"
-                            x1="0"
-                            y1="0"
-                            x2="120"
-                            y2="0"
-                            gradientUnits="userSpaceOnUse"
-                          >
-                            <stop offset="0%" stopColor="#9333ea" />
-                            <stop offset="100%" stopColor="#ec4899" />
-                          </linearGradient>
-                        </defs>
-                        <path
-                          d="M0 20 Q 10 10, 20 20 Q 30 30, 40 20 Q 50 10, 60 20 Q 70 30, 80 20 Q 90 10, 100 20"
-                          stroke="url(#waveGradient)"
-                          strokeWidth="4"
-                          fill="none"
-                          strokeLinecap="round"
-                        />
-                        <rect
-                          x="102"
-                          y="17"
-                          width="10"
-                          height="6"
-                          rx="1"
-                          fill="#ec4899"
-                        />
-                        <line
-                          x1="112"
-                          y1="18"
-                          x2="116"
-                          y2="18"
-                          stroke="#ec4899"
-                          strokeWidth="2"
-                        />
-                        <line
-                          x1="112"
-                          y1="22"
-                          x2="116"
-                          y2="22"
-                          stroke="#ec4899"
-                          strokeWidth="2"
-                        />
-                      </svg>
-                    </div>
-                    <div className="text-center text-white">
-                      <div className="text-xs text-white/70">Mood Detectado:</div>
-                      <div className="text-sm font-medium text-white">
-                        Melancolía suave 🌧️
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/*  Modal de Login que se muestra si no está autenticado */}
-      {showLogin && (
-        <Login 
-          onClose={() => setShowLogin(false)}
-          onSwitchToRegister={() => {
-            setShowLogin(false);
-
-          }}
-        />
-      )}
-    </>
-  );
+			{/*  Modal de Login que se muestra si no está autenticado */}
+			{showLogin && (
+				<Login 
+					onClose={() => setShowLogin(false)}
+					onSwitchToRegister={() => {
+						setShowLogin(false);
+					}}
+				/>
+			)}
+		</>
+	);
 }

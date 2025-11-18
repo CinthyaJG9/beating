@@ -313,11 +313,13 @@ export default function ProfileB() {
             ) : (
               <>
                 {/* Grid de reseñas MEJORADO */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {currentResenas.map((resena) => {
                     const puntuacionReescalada = reescalarPuntuacion(resena.puntuacion);
                     const estrellasLlenas = obtenerEstrellasLlenas(resena.puntuacion);
-                    
+                    const baseCardClass = obtenerColorFondo(resena.sentimiento);
+                    const finalCardClass = resena.sentimiento ? baseCardClass : 'bg-gray-950/80 border-white/20';
+
                     console.log(`Reseña ${resena.id_resena}:`, {
                       original: resena.puntuacion,
                       reescalada: puntuacionReescalada,
@@ -327,7 +329,7 @@ export default function ProfileB() {
                     return (
                       <Card
                         key={resena.id_resena}
-                        className={`relative overflow-hidden group backdrop-blur-lg border-2 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl ${obtenerColorFondo(resena.sentimiento)}`}
+                        className={`relative overflow-hidden group backdrop-blur-lg border-2 rounded-2xl shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl ${finalCardClass}`}
                       >
                         <CardContent className="relative z-10 p-6 h-full flex flex-col">
                           {/* Header con información principal - DISEÑO MEJORADO */}
