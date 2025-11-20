@@ -15,6 +15,7 @@ from resenas.routes import init_resenas_routes
 from listas.routes import init_listas_routes
 from seguimientos.routes import init_seguimientos_routes
 from comunidad.routes import init_comunidad_routes
+from home.routes import init_home_routes
 
 app = Flask(__name__)
 
@@ -54,6 +55,7 @@ init_resenas_routes(app)
 init_listas_routes(app)
 init_seguimientos_routes(app)
 init_comunidad_routes(app)
+init_home_routes(app)
 
 # 🏠 Rutas básicas
 @app.route('/')
