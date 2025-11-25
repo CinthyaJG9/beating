@@ -395,3 +395,121 @@ def init_canciones_routes(app):
         finally:
             if cur:
                 cur.close()
+
+
+    @app.route('/canciones-artista', methods=['GET'])
+    def get_artist_tracks():
+        """Obtiene las canciones populares de un artista desde Spotify"""
+        conn = None
+        cur = None
+        try:
+            artist_id = request.args.get('id', '').strip()
+            if not artist_id:
+                return jsonify({'error': 'ID de artista requerido'}), 400
+            
+            print(f"🎵 Obteniendo canciones para artista ID: {artist_id}")
+            
+            # Obtener información del artista primero
+            try:
+                artist_info = spotify_client.sp_search.artist(artist_id)
+                print(f"✅ Artista encontrado: {artist_info['name']}")
+            except Exception as artist_error:
+                print(f"❌ Error obteniendo artista: {artist_error}")
+                return jsonify({'error': 'Artista no encontrado en Spotify'}), 404
+            
+            # Obtener top tracks del artista
+            try:
+                top_tracks_response = spotify_client.sp_search.artist_top_tracks(
+                    artist_id=artist_id,
+                    country='US'
+                )
+                
+                print(f"✅ Canciones encontradas: {len(top_tracks_response['tracks'])}")
+                
+            except Exception as tracks_error:
+                print(f"❌ Error obteniendo canciones: {tracks_error}")
+                return jsonify({'error': 'Error al obtener canciones del artista'}), 500
+            
+            # Procesar canciones
+            artist_tracks = []
+            
+            for track in top_tracks_response['tracks']:
+                try:
+                    track_info = {
+                        'id': track['id'],
+                        'name': track['name'],
+                        'artists': [artist['name'] for artist in track['artists']],
+                        'album': track['album']['name'],
+                        'album_image': track['album']['images'][0]['url'] if track['album']['images'] else None,
+                        'preview_url': track.get('preview_url'),
+                        'duration_ms': track['duration_ms'],
+                        'popularity': track['popularity'],
+                        'is_top_track': True,  # Estas son las canciones populares
+                        'spotify_url': track['external_urls']['spotify']
+                    }
+                    
+                    # Verificar si existe en nuestra base de datos
+                    conn = db.get_connection()
+                    if conn:
+                        try:
+                            cur = conn.cursor()
+                            cur.execute("""
+                                SELECT id_cancion FROM canciones 
+                                WHERE titulo ILIKE %s AND artista ILIKE %s
+                                LIMIT 1
+                            """, (track_info['name'], track_info['artists'][0]))
+                            
+                            existing_track = cur.fetchone()
+                            
+                            if existing_track:
+                                track_info['id_cancion'] = existing_track[0]
+                                track_info['exists_in_db'] = True
+                                
+                                # Contar reseñas
+                                cur.execute("""
+                                    SELECT COUNT(*) FROM resenas 
+                                    WHERE id_cancion = %s
+                                """, (existing_track[0],))
+                                review_count = cur.fetchone()[0]
+                                track_info['review_count'] = review_count
+                            else:
+                                track_info['exists_in_db'] = False
+                                track_info['review_count'] = 0
+                                
+                            cur.close()
+                            
+                        except Exception as db_error:
+                            print(f"Error en consulta BD: {db_error}")
+                        finally:
+                            db.close_connection(conn)
+                    
+                    artist_tracks.append(track_info)
+                    
+                except Exception as track_error:
+                    print(f"❌ Error procesando canción {track.get('name', 'unknown')}: {track_error}")
+                    continue
+            
+            print(f"🎉 Retornando {len(artist_tracks)} canciones para {artist_info['name']}")
+            
+            return jsonify({
+                'artist': {
+                    'id': artist_info['id'],
+                    'name': artist_info['name'],
+                    'image': artist_info['images'][0]['url'] if artist_info['images'] else None,
+                    'genres': artist_info.get('genres', []),
+                    'followers': artist_info.get('followers', {}).get('total', 0),
+                    'popularity': artist_info.get('popularity', 0)
+                },
+                'tracks': artist_tracks
+            }), 200
+            
+        except Exception as e:
+            print(f"❌ ERROR en /canciones-artista: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': 'Error interno del servidor'}), 500
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                db.close_connection(conn)

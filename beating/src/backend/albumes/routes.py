@@ -289,3 +289,132 @@ def init_albumes_routes(app):
                 cur.close()
             if conn:
                 db.close_connection(conn)
+
+
+    @app.route('/albumes-artista', methods=['GET'])
+    def get_artist_albums():
+        """Obtiene los álbumes de un artista específico desde Spotify"""
+        conn = None
+        cur = None
+        try:
+            artist_id = request.args.get('id', '').strip()
+            if not artist_id:
+                return jsonify({'error': 'ID de artista requerido'}), 400
+            
+            print(f"🎵 Obteniendo álbumes para artista ID: {artist_id}")
+            
+            # Obtener información del artista primero
+            try:
+                artist_info = spotify_client.sp_search.artist(artist_id)
+                print(f"✅ Artista encontrado: {artist_info['name']}")
+            except Exception as artist_error:
+                print(f"❌ Error obteniendo artista: {artist_error}")
+                return jsonify({'error': 'Artista no encontrado en Spotify'}), 404
+            
+            # Obtener álbumes del artista
+            try:
+                albums_response = spotify_client.sp_search.artist_albums(
+                    artist_id=artist_id,
+                    album_type='album,single',  # Incluir álbumes y singles
+                    limit=50,  # Más álbumes
+                    country='US'
+                )
+                
+                print(f"✅ Álbumes encontrados: {len(albums_response['items'])}")
+                
+            except Exception as albums_error:
+                print(f"❌ Error obteniendo álbumes: {albums_error}")
+                return jsonify({'error': 'Error al obtener álbumes del artista'}), 500
+            
+            # Procesar álbumes
+            artist_albums = []
+            seen_albums = set()  # Para evitar duplicados
+            
+            for album in albums_response['items']:
+                try:
+                    # Usar combinación de nombre y fecha de lanzamiento como clave única
+                    album_key = f"{album['name'].lower()}-{album['release_date']}"
+                    
+                    if album_key not in seen_albums:
+                        seen_albums.add(album_key)
+                        
+                        album_info = {
+                            'id': album['id'],
+                            'name': album['name'],
+                            'artist': artist_info['name'],
+                            'image': album['images'][0]['url'] if album['images'] else None,
+                            'year': album['release_date'][:4] if album['release_date'] else 'Desconocido',
+                            'total_tracks': album['total_tracks'],
+                            'release_date': album['release_date'],
+                            'spotify_url': album['external_urls']['spotify'],
+                            'album_type': album['album_type']  # album, single, compilation
+                        }
+                        
+                        # Verificar si existe en nuestra base de datos
+                        conn = db.get_connection()
+                        if conn:
+                            try:
+                                cur = conn.cursor()
+                                cur.execute("""
+                                    SELECT id_album FROM albumes 
+                                    WHERE titulo ILIKE %s AND artista ILIKE %s
+                                    LIMIT 1
+                                """, (album_info['name'], album_info['artist']))
+                                
+                                existing_album = cur.fetchone()
+                                
+                                if existing_album:
+                                    album_info['id_album'] = existing_album[0]
+                                    album_info['exists_in_db'] = True
+                                    
+                                    # Contar reseñas
+                                    cur.execute("""
+                                        SELECT COUNT(*) FROM resenas 
+                                        WHERE id_album = %s
+                                    """, (existing_album[0],))
+                                    review_count = cur.fetchone()[0]
+                                    album_info['review_count'] = review_count
+                                else:
+                                    album_info['exists_in_db'] = False
+                                    album_info['review_count'] = 0
+                                    
+                                cur.close()
+                                
+                            except Exception as db_error:
+                                print(f"Error en consulta BD: {db_error}")
+                            finally:
+                                db.close_connection(conn)
+                        
+                        artist_albums.append(album_info)
+                        
+                except Exception as album_error:
+                    print(f"❌ Error procesando álbum {album.get('name', 'unknown')}: {album_error}")
+                    continue
+            
+            # Ordenar álbumes por año (más recientes primero)
+            artist_albums.sort(key=lambda x: x['release_date'] or '0000-00-00', reverse=True)
+            
+            print(f"🎉 Retornando {len(artist_albums)} álbumes únicos para {artist_info['name']}")
+            
+            return jsonify({
+                'artist': {
+                    'id': artist_info['id'],
+                    'name': artist_info['name'],
+                    'image': artist_info['images'][0]['url'] if artist_info['images'] else None,
+                    'genres': artist_info.get('genres', []),
+                    'followers': artist_info.get('followers', {}).get('total', 0),
+                    'popularity': artist_info.get('popularity', 0)
+                },
+                'albums': artist_albums
+            }), 200
+            
+        except Exception as e:
+            print(f"❌ ERROR en /albumes-artista: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': 'Error interno del servidor'}), 500
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                db.close_connection(conn)
