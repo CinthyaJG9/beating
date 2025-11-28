@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { useAuth } from './AuthContext';
 
 const getReviewStyles = (reviewType, sentiment) => {
     const baseStyles = "rounded-lg p-3 border-l-4 font-medium ";
@@ -36,6 +37,7 @@ const getReviewMeta = (reviewType, sentiment) => {
 
 const Comunidad = () => {
     const navigate = useNavigate();
+    const { user, isAuthenticated } = useAuth();
     
     // Estados para la comunidad
     const [communityUsers, setCommunityUsers] = useState([]);
@@ -54,30 +56,45 @@ const Comunidad = () => {
 
     // Estilos constantes
     const appBackground = "min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)] text-white";
-    const cardStyle = "bg-purple-950/60 rounded-xl p-6 shadow-lg border border-purple-500/40 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]";
+    const userCardStyle = "bg-gradient-to-br from-purple-900/40 to-pink-900/30 rounded-2xl p-6 shadow-xl border border-purple-500/30 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-purple-500/20";
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const communityRes = await axios.get('http://localhost:5000/comunidad');
+                setLoading(true);
+                setError(null);
+
+                // Construir URL con parámetro para excluir usuario actual
+                const comunidadUrl = user && user.id 
+                    ? `http://localhost:5000/comunidad?exclude_user_id=${user.id}`
+                    : 'http://localhost:5000/comunidad';
+
+                console.log('🔍 Fetching comunidad from:', comunidadUrl);
                 
+                const [communityRes, songsP, songsN, songsU, albumsP, albumsN, albumsU] = await Promise.all([
+                    axios.get(comunidadUrl).catch(e => {
+                        console.error('❌ Error fetching comunidad:', e.response?.data || e.message);
+                        // Si hay error, intentar sin excluir usuario
+                        return axios.get('http://localhost:5000/comunidad').catch(finalError => {
+                            console.error('❌ Error final fetching comunidad:', finalError.response?.data || finalError.message);
+                            return { data: { users: [] } };
+                        });
+                    }),
+                    axios.get("http://localhost:5000/api/top_songs?sentiment=positive&limit=10").catch(e => ({ data: [] })),
+                    axios.get("http://localhost:5000/api/top_songs?sentiment=negative&limit=10").catch(e => ({ data: [] })),
+                    axios.get("http://localhost:5000/api/top_songs?sentiment=neutral&limit=10").catch(e => ({ data: [] })),
+                    axios.get("http://localhost:5000/api/top_albums?sentiment=positive&limit=10").catch(e => ({ data: [] })),
+                    axios.get("http://localhost:5000/api/top_albums?sentiment=negative&limit=10").catch(e => ({ data: [] })),
+                    axios.get("http://localhost:5000/api/top_albums?sentiment=neutral&limit=10").catch(e => ({ data: [] }))
+                ]);
+
+                console.log('✅ Comunidad response:', communityRes.data);
+
                 if (communityRes.data && communityRes.data.users) {
                     setCommunityUsers(communityRes.data.users); 
                 } else {
                     setCommunityUsers([]); 
                 }
-
-                const [
-                    songsP, songsN, songsU,
-                    albumsP, albumsN, albumsU
-                ] = await Promise.all([
-                    axios.get("http://localhost:5000/api/top_songs?sentiment=positive&limit=10").catch(e => e.response),
-                    axios.get("http://localhost:5000/api/top_songs?sentiment=negative&limit=10").catch(e => e.response),
-                    axios.get("http://localhost:5000/api/top_songs?sentiment=neutral&limit=10").catch(e => e.response),
-                    axios.get("http://localhost:5000/api/top_albums?sentiment=positive&limit=10").catch(e => e.response),
-                    axios.get("http://localhost:5000/api/top_albums?sentiment=negative&limit=10").catch(e => e.response),
-                    axios.get("http://localhost:5000/api/top_albums?sentiment=neutral&limit=10").catch(e => e.response)
-                ]);
 
                 const getSafeData = (res, sentiment) => {
                     const data = res?.data || [];
@@ -96,7 +113,7 @@ const Comunidad = () => {
                 ]);
 
             } catch (err) {
-                console.error("Error fetching data:", err);
+                console.error("❌ Error fetching data:", err);
                 setError('Error al cargar datos. Verifica la conexión con el servidor Flask.');
             } finally {
                 setLoading(false);
@@ -104,7 +121,7 @@ const Comunidad = () => {
         };
 
         fetchData();
-    }, []);
+    }, [user]);
     
     const obtenerInicial = (nombre) => {
         return nombre ? nombre.charAt(0).toUpperCase() : "U";
@@ -112,9 +129,14 @@ const Comunidad = () => {
 
     const getColorForGenre = (genre) => {
         const hash = genre.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const colors = ['purple', 'pink', 'blue', 'green', 'yellow'];
-        const color = colors[hash % colors.length];
-        return `bg-${color}-500/30 text-${color}-300`;
+        const colors = [
+            'bg-purple-500/30 text-purple-300',
+            'bg-pink-500/30 text-pink-300', 
+            'bg-blue-500/30 text-blue-300',
+            'bg-green-500/30 text-green-300',
+            'bg-yellow-500/30 text-yellow-300'
+        ];
+        return colors[hash % colors.length];
     };
 
     const filteredUsers = communityUsers.filter(user => 
@@ -122,7 +144,6 @@ const Comunidad = () => {
     );
     
     const filterContent = (content) => {
-        // Filtra por el sentimiento activo (positive, negative, neutral)
         return content.filter(item => {
             return item.review_sentiment === activeFilter;
         });
@@ -209,7 +230,7 @@ const Comunidad = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                             {filteredUsers.length > 0 ? (
                                 filteredUsers.map((user) => (
-                                    <Card key={user.id} className={cardStyle}>
+                                    <Card key={user.id} className={userCardStyle}>
                                         <CardContent className="flex flex-col items-center text-center gap-4">
                                             {/* Icono de Perfil */}
                                             <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-3xl font-bold text-white shadow-lg flex-shrink-0 border-4 border-purple-500/50">
@@ -237,9 +258,9 @@ const Comunidad = () => {
                                             </div>
 
                                             <div className="flex flex-wrap justify-center gap-2 mb-4">
-                                                {user.genres && user.genres.slice(0, 3).map((genre) => (
+                                                {user.genres && user.genres.slice(0, 3).map((genre, index) => (
                                                     <span 
-                                                        key={genre}
+                                                        key={index}
                                                         className={`text-xs px-3 py-1 rounded-full font-medium ${getColorForGenre(genre)}`}
                                                     >
                                                         {genre}
@@ -249,7 +270,7 @@ const Comunidad = () => {
                                         
                                             <Button
                                                 onClick={() => navigate(`/perfil/${user.id}`)}
-                                                className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-md mt-4"
+                                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl shadow-md transition-all duration-300"
                                             >
                                                 Ver Perfil
                                             </Button>
@@ -312,7 +333,6 @@ const Comunidad = () => {
                         {filterContent(allSongs).length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
                                 {filterContent(allSongs).map((song, index) => {
-                                    // Usamos el campo que forzamos en el fetch: 'review_sentiment'
                                     const sentiment = song.review_sentiment || 'all'; 
                                     const reviewMeta = getReviewMeta(song.review_type, sentiment);
                                     
