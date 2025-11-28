@@ -13,6 +13,7 @@ import ProfileB from "./pages/ProfileB";
 import Canciones from "./pages/Canciones";
 import Albumes from "./pages/Albumes";
 import Comunidad from "./pages/Comunidad"
+import ProfileOther from "./pages/ProfileOther";
 
 export default function App() {
   return (
@@ -32,6 +33,8 @@ export default function App() {
           <Route path="/albumes" element={<Albumes />} />
           <Route path="/profileB" element={<ProfileB /> } />
           <Route path="/comunidad" element={<Comunidad /> } />
+          <Route path="/profileOther" element={<ProfileOther /> } />
+          <Route path="/perfil/:userId" element={<ProfileOther />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

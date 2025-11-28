@@ -80,7 +80,7 @@ if __name__ == '__main__':
     print(f"📊 Base de datos: {'✅ Conectada' if db.pool else '❌ Error'}")
     print(f"🎵 Spotify Search: {'✅ Configurado' if spotify_client.sp_search else '❌ Error'}")
     print(f"🔐 Spotify User: {'✅ Autenticado' if spotify_client.sp_user else '⚠️  Necesita autenticación'}")
-    print(f"🌐 CORS: ✅ Configurado para http://localhost:5173")
+    print(f"🌐 CORS: ✅ Configurado para http://localhost:5000")
     print(f"🔧 Debug: {'✅ Activado' if APP_CONFIG['debug'] else '❌ Desactivado'}")
     print(f"🌐 Servidor corriendo en: http://localhost:{APP_CONFIG['port']}")
     print("=" * 50)

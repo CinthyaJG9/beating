@@ -268,7 +268,7 @@ def init_spotify_routes(app):
             # Buscar playlist existente o crear nueva
             print("🔍 Buscando playlists existentes...")
             playlists = spotify_client.sp_user.current_user_playlists()
-            nombre_playlist = "Top Canciones Positivas - Beating"
+            nombre_playlist = "Top Beating"
             playlist_id = None
 
             for playlist in playlists['items']:
@@ -288,7 +288,7 @@ def init_spotify_routes(app):
                 playlist = spotify_client.sp_user.user_playlist_create(
                     user=user_id,
                     name=nombre_playlist,
-                    public=False,
+                    public=True,
                     description="🎵 Tus canciones más positivas según Beating - Generada automáticamente basada en análisis de sentimientos"
                 )
                 playlist_id = playlist['id']

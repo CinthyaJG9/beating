@@ -248,7 +248,7 @@ const Comunidad = () => {
                                             </div>
                                         
                                             <Button
-                                                onClick={() => navigate(`/profileB?user=${user.id}`)}
+                                                onClick={() => navigate(`/perfil/${user.id}`)}
                                                 className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-md mt-4"
                                             >
                                                 Ver Perfil

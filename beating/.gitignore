@@ -1,6 +1,8 @@
 # --------------------------
 # Node / React
 # --------------------------
+.env
+config.py
 node_modules/
 dist/
 dist-ssr/
