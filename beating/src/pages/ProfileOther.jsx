@@ -287,9 +287,6 @@ export default function ProfileOther() {
                     <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
                         {profileUser.nombre_usuario}
                     </h2>
-                    <p className="text-gray-300 mt-2 flex items-center gap-2">
-                        <span>⭐</span> Perfil Público
-                    </p>
                     <p className="text-sm text-gray-400 mt-2 flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         Miembro desde {formatearFecha(profileUser.fecha_creacion)}

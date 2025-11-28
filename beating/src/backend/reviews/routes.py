@@ -52,7 +52,7 @@ def generar_wordcloud_beating(textos):
 
     # Procesar texto con spaCy - enfoque en las palabras más significativas
     doc = nlp(texto_completo) 
-    allowed_pos = {'ADJ', 'VERB'}  # Solo adjetivos y sustantivos para palabras más relevantes
+    allowed_pos = {'NOUN', 'ADJ'}  # Solo adjetivos y sustantivos para palabras más relevantes
     
     filtered_words = [
         token.lemma_.lower()
@@ -85,7 +85,12 @@ def generar_wordcloud_beating(textos):
         'hacer', 'tener', 'poder', 'decir', 'ver', 'dar', 'saber', 'ir',
         'ser', 'estar', 'haber', 'poder', 'querer', 'parecer', 'gente',
         'tiempo', 'vez', 'parte', 'forma', 'caso', 'manera', 'momento','instrumento',
-        'sicario', 'llegadoro', 'mediocre', 'melancolía' 
+        'sicario', 'llegadoro', 'mediocre', 'melancolía', 'persona', 'aburrido', 'qiue', 
+        'electrónico', 'aburrido', 'barrera', 'burla', 'cuandotodo', 'batería', 'concierto',
+        'conforme', 'vocalista', 'sobrellevar', 'quelar', 'pasar', 'género', 'terminar',
+        'primo', 'llegar', 'él', 'general', 'recuerdaar', 'turner', 'termino',
+        'escuche', 'cabra', 'sonar', 'pegadecer', 'tristeza', 'nostalgia',
+        'preocupación', 'lleno', 'dueto', 'espera', 'regresa'
     }
     
     all_stopwords = spanish_stopwords.union(domain_stopwords)
