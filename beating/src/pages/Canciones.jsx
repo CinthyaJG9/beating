@@ -7,8 +7,7 @@ import Login from "./Login";
 import { useAuth } from "../pages/AuthContext";
 
 export default function Canciones() {
-
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, savePendingSelection } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [search, setSearch] = useState("");
   const [canciones, setCanciones] = useState([]);
@@ -79,41 +78,61 @@ export default function Canciones() {
     return (rating * 5).toFixed(1);
   };
 
-// En Canciones.jsx - modifica la función handleCrearResena
-const handleCrearResena = (cancion) => {
-  if (!isAuthenticated) {
-    setShowLogin(true);
-    return;
-  }
-  
-  if (cancion.existe_en_bd) {
-    // Si la canción ya existe en nuestra BD, redirigir directamente a reseñas con los datos
-    navigate('/resenas', { 
-      state: { 
-        selectedSong: {
-          id: cancion.id_cancion,
-          name: cancion.titulo,
-          artist: cancion.artista,
-          album: cancion.album_titulo,
-          image: cancion.imagen_url
+  const handleCrearResena = (cancion) => {
+    if (!isAuthenticated) {
+      // 👇 GUARDAR LA SELECCIÓN ANTES DE MOSTRAR LOGIN
+      const selection = cancion.existe_en_bd 
+        ? { 
+            selectedSong: {
+              id: cancion.id_cancion,
+              name: cancion.titulo,
+              artist: cancion.artista,
+              album: cancion.album_titulo,
+              image: cancion.imagen_url
+            }
+          }
+        : { 
+            spotifySong: {
+              name: cancion.titulo,
+              artist: cancion.artista,
+              album: cancion.album_titulo,
+              image: cancion.imagen_url,
+              spotifyId: cancion.id_spotify
+            }
+          };
+      
+      savePendingSelection(selection, '/resenas');
+      setShowLogin(true);
+      return;
+    }
+    
+    // 👇 CÓDIGO ORIGINAL (cuando ya está autenticado)
+    if (cancion.existe_en_bd) {
+      navigate('/resenas', { 
+        state: { 
+          selectedSong: {
+            id: cancion.id_cancion,
+            name: cancion.titulo,
+            artist: cancion.artista,
+            album: cancion.album_titulo,
+            image: cancion.imagen_url
+          }
         }
-      }
-    });
-  } else {
-    // Para canciones de Spotify que no están en nuestra BD
-    navigate('/resenas', { 
-      state: { 
-        spotifySong: {
-          name: cancion.titulo,
-          artist: cancion.artista,
-          album: cancion.album_titulo,
-          image: cancion.imagen_url,
-          spotifyId: cancion.id_spotify
+      });
+    } else {
+      navigate('/resenas', { 
+        state: { 
+          spotifySong: {
+            name: cancion.titulo,
+            artist: cancion.artista,
+            album: cancion.album_titulo,
+            image: cancion.imagen_url,
+            spotifyId: cancion.id_spotify
+          }
         }
-      }
-    });
-  }
-};
+      });
+    }
+  };
 
   const handleReproducir = (cancion) => {
     if (cancion.preview_url) {
@@ -241,44 +260,43 @@ const handleCrearResena = (cancion) => {
                           </div>
                         )}
 
-
-{cancion.reseñas_recientes && cancion.reseñas_recientes.length > 0 ? (
-  <div className="mb-5">
-    <p className="text-white text-base font-bold mb-4">💬 Reseñas recientes:</p>
-    <div className="space-y-4">
-      {cancion.reseñas_recientes.slice(0, 2).map((resena, index) => (
-        <div key={index} className="bg-white/20 rounded-xl p-4 border-2 border-white/30">
-          <div className="flex items-center gap-3 mb-3">
-            <span className={`text-lg ${obtenerColorSentimiento(resena.sentimiento)}`}>
-              {obtenerIconoSentimiento(resena.sentimiento)}
-            </span>
-            <span className="text-white font-bold text-base">{resena.usuario}</span>
-            {resena.puntuacion && (
-              <span className="text-yellow-400 text-base font-bold ml-auto">
-                {formatearRating(resena.puntuacion)}★
-              </span>
-            )}
-          </div>
-          <p className="text-white text-base leading-relaxed line-clamp-3 font-semibold">
-            "{resena.texto.length > 120 
-              ? resena.texto.substring(0, 120) + '...' 
-              : resena.texto}"
-          </p>
-        </div>
-      ))}
-    </div>
-  </div>
-) : (
-  <div className="mb-5 text-center py-6 border-2 border-dashed border-yellow-400/60 rounded-xl bg-yellow-500/20">
-    <div className="text-4xl mb-4 text-yellow-300">✨</div>
-    <p className="text-white font-bold text-xl mb-3">
-      ¡Sé el primero en reseñar!
-    </p>
-    <p className="text-yellow-200 text-lg font-semibold">
-      Comparte tu experiencia con esta canción
-    </p>
-  </div>
-)}
+                        {cancion.reseñas_recientes && cancion.reseñas_recientes.length > 0 ? (
+                          <div className="mb-5">
+                            <p className="text-white text-base font-bold mb-4">💬 Reseñas recientes:</p>
+                            <div className="space-y-4">
+                              {cancion.reseñas_recientes.slice(0, 2).map((resena, index) => (
+                                <div key={index} className="bg-white/20 rounded-xl p-4 border-2 border-white/30">
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <span className={`text-lg ${obtenerColorSentimiento(resena.sentimiento)}`}>
+                                      {obtenerIconoSentimiento(resena.sentimiento)}
+                                    </span>
+                                    <span className="text-white font-bold text-base">{resena.usuario}</span>
+                                    {resena.puntuacion && (
+                                      <span className="text-yellow-400 text-base font-bold ml-auto">
+                                        {formatearRating(resena.puntuacion)}★
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-white text-base leading-relaxed line-clamp-3 font-semibold">
+                                    "{resena.texto.length > 120 
+                                      ? resena.texto.substring(0, 120) + '...' 
+                                      : resena.texto}"
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mb-5 text-center py-6 border-2 border-dashed border-yellow-400/60 rounded-xl bg-yellow-500/20">
+                            <div className="text-4xl mb-4 text-yellow-300">✨</div>
+                            <p className="text-white font-bold text-xl mb-3">
+                              ¡Sé el primero en reseñar!
+                            </p>
+                            <p className="text-yellow-200 text-lg font-semibold">
+                              Comparte tu experiencia con esta canción
+                            </p>
+                          </div>
+                        )}
 
                         {/* Botones de acción */}
                         <div className="flex gap-4 mt-7">
@@ -387,7 +405,7 @@ const handleCrearResena = (cancion) => {
         </div>
       </main>
 
-      {showLogin && <Login onClose={() => setShowLogin(false)} />}
+      {showLogin && <Login onClose={() => setShowLogin(false)} onSwitchToRegister={() => {}} />}
     </>
   );
 }

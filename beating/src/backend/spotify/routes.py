@@ -218,15 +218,32 @@ def init_spotify_routes(app):
         try:
             print("🎵 Iniciando creación de playlist...")
             
-            # Verificar autenticación de Spotify
-            if not spotify_client.sp_user:
-                print("❌ Spotify no autenticado")
-                return jsonify({"error": "Usuario de Spotify no autenticado"}), 401
-                
-            # Obtener información del usuario de Spotify
+            # 👇 VERIFICACIÓN MEJORADA DE AUTENTICACIÓN
+            print("🔍 Verificando autenticación de Spotify...")
+            
+            if not spotify_client.is_user_authenticated():
+                print("❌ Usuario no autenticado - generando URL de auth")
+                try:
+                    auth_url = spotify_client.sp_oauth.get_authorize_url()
+                    print(f"🔗 URL de autenticación generada: {auth_url}")
+                    
+                    return jsonify({
+                        "error": "Usuario no autenticado con Spotify",
+                        "auth_required": True,
+                        "auth_url": auth_url,
+                        "message": "Por favor autentícate con Spotify primero"
+                    }), 401
+                except Exception as auth_error:
+                    print(f"❌ Error generando auth URL: {auth_error}")
+                    return jsonify({
+                        "error": "Error de autenticación con Spotify",
+                        "details": str(auth_error)
+                    }), 500
+            
+            # Si llegamos aquí, el usuario está autenticado
             user_info = spotify_client.sp_user.me()
             user_id = user_info['id']
-            print(f"✅ Usuario de Spotify: {user_id}")
+            print(f"✅ Usuario de Spotify autenticado: {user_id}")
             
             # Obtener conexión a la base de datos
             conn = db.get_connection()

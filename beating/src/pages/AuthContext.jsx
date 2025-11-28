@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-//import jwtDecode from 'jwt-decode'; // Necesario para decodificar el token
 
 // Crea el Contexto
 const AuthContext = createContext();
@@ -29,10 +28,13 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 👇 NUEVO: Estados para persistir la selección durante el login
+  const [pendingSelection, setPendingSelection] = useState(null);
+  const [pendingRedirect, setPendingRedirect] = useState(null);
+
   // Función principal para chequear el token al cargar
   const loadUserFromToken = (token) => {
     try {
-      // 🛑 CAMBIO: Usamos la función manual
       const decoded = parseJwt(token); 
 
       if (!decoded) {
@@ -72,18 +74,37 @@ export const AuthProvider = ({ children }) => {
   const login = (token, userData) => {
     localStorage.setItem('token', token);
     setIsAuthenticated(true);
-    setUser(userData); // Guardar los datos del usuario (ej: {id, username})
+    setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     setIsAuthenticated(false);
     setUser(null);
+    // 👇 Limpiar selecciones pendientes al hacer logout
+    setPendingSelection(null);
+    setPendingRedirect(null);
+  };
+
+  // 👇 NUEVO: Función para guardar selección antes del login
+  const savePendingSelection = (selection, redirectPath = '/resenas') => {
+    console.log('💾 Guardando selección pendiente:', selection);
+    setPendingSelection(selection);
+    setPendingRedirect(redirectPath);
+  };
+
+  // 👇 NUEVO: Función para obtener y limpiar la selección pendiente
+  const getPendingSelection = () => {
+    const selection = pendingSelection;
+    const redirect = pendingRedirect;
+    console.log('📥 Recuperando selección pendiente:', selection);
+    setPendingSelection(null);
+    setPendingRedirect(null);
+    return { selection, redirect };
   };
 
   if (isLoading) {
-    // Muestra un spinner o nada mientras carga el token
-    return (
+    return (
       <div className="fixed inset-0 flex justify-center items-center bg-[#1e1626]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400"></div>
       </div>
@@ -97,6 +118,9 @@ export const AuthProvider = ({ children }) => {
     isLoading,
     login,
     logout,
+    // 👇 Exportar las nuevas funciones
+    savePendingSelection,
+    getPendingSelection
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

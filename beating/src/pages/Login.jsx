@@ -12,8 +12,7 @@ export default function Login({ onClose, onSwitchToRegister }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const { login } = useAuth();
-
+  const { login, getPendingSelection } = useAuth();
 
   const handleLogin = async () => {
     setLoading(true);
@@ -34,25 +33,37 @@ export default function Login({ onClose, onSwitchToRegister }) {
       const data = await response.json();
 
       if (response.ok) {
-        console.log('Respuesta del login:', data);
+        console.log('✅ Login exitoso:', data);
         
         const userData = {
           id: data.user?.id || data.user_id || data.id,
           username: data.user?.username || data.user?.email || data.username || email.split('@')[0]
         };
 
+        // Hacer login
         login(data.token, userData);
         
-        if (onClose) onClose();
+        // 👇 OBTENER LA SELECCIÓN PENDIENTE DESPUÉS DEL LOGIN
+        const { selection, redirect } = getPendingSelection();
         
-        // 👇 REDIRIGIR A RESEÑAS DESPUÉS DEL LOGIN
-        navigate('/resenas');
+        if (selection) {
+          console.log('🔍 Selección pendiente encontrada, redirigiendo...', selection);
+          // 👇 REDIRIGIR A RESEÑAS CON LA SELECCIÓN GUARDADA
+          navigate(redirect || '/resenas', { state: selection });
+        } else {
+          console.log('🔍 No hay selección pendiente, redirigiendo a reseñas');
+          // Si no hay selección pendiente, redirigir a reseñas
+          navigate('/resenas');
+        }
+        
+        // Cerrar modal si existe
+        if (onClose) onClose();
         
       } else {
         setError(data.error || 'Error en las credenciales');
       }
     } catch (error) {
-      console.error('Error completo:', error);
+      console.error('❌ Error completo:', error);
       setError('No se pudo conectar al servidor. Verifica que el backend esté corriendo.');
     } finally {
       setLoading(false);

@@ -10,9 +10,9 @@ import { useLocation } from 'react-router-dom';
 const Resenas = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [artists, setArtists] = useState([]);
+  const [albums, setAlbums] = useState([]);
   const [selectedArtist, setSelectedArtist] = useState(null);
   const [tracks, setTracks] = useState([]);
-  const [albums, setAlbums] = useState([]); // 👈 NUEVO: Estado para álbumes
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [review, setReview] = useState('');
@@ -21,11 +21,11 @@ const Resenas = () => {
   const [activeTab, setActiveTab] = useState('search');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [contentType, setContentType] = useState('tracks'); // 👈 NUEVO: 'tracks' o 'albums'
+  const [searchType, setSearchType] = useState('artist'); // 'artist' o 'album'
  
   const itemsPerPage = 10;
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth(); 
+  const { isAuthenticated } = useAuth(); 
   const location = useLocation();
 
   useEffect(() => {
@@ -57,7 +57,6 @@ const Resenas = () => {
         setSelectedArtist(simulatedArtist);
         setSelectedTrack(simulatedTrack);
         setSelectedAlbum(null);
-        setContentType('tracks');
         setActiveTab('review');
       }
       
@@ -85,7 +84,6 @@ const Resenas = () => {
         setSelectedArtist(simulatedArtist);
         setSelectedAlbum(simulatedAlbum);
         setSelectedTrack(null);
-        setContentType('albums');
         setActiveTab('review');
       }
       
@@ -105,9 +103,9 @@ const Resenas = () => {
     
     setLoading(true);
     setArtists([]);
+    setAlbums([]);
     setSelectedArtist(null);
     setTracks([]);
-    setAlbums([]); // 👈 Limpiar álbumes también
     setSelectedTrack(null);
     setSelectedAlbum(null);
     
@@ -138,14 +136,64 @@ const Resenas = () => {
     }
   };
 
+  // Buscar álbumes directamente
+  const searchAlbums = async () => {
+    if (!searchTerm.trim()) {
+      setMessage('Por favor ingresa un nombre de álbum o artista');
+      return;
+    }
+    
+    console.log('🔍 Buscando álbumes:', searchTerm);
+    
+    setLoading(true);
+    setAlbums([]);
+    setArtists([]);
+    setSelectedArtist(null);
+    setTracks([]);
+    setSelectedTrack(null);
+    setSelectedAlbum(null);
+    
+    try {
+      const response = await axios.get(`http://localhost:5000/api/albumes/buscar?q=${encodeURIComponent(searchTerm)}`, {
+        timeout: 10000
+      });
+      
+      console.log('✅ Respuesta de álbumes:', response.data);
+      
+      setAlbums(response.data || []);
+      setTotalPages(Math.ceil(response.data.length / itemsPerPage));
+      setMessage(response.data?.length ? '' : 'No se encontraron álbumes');
+      setActiveTab('albumResults');
+    } catch (error) {
+      console.error('❌ Error buscando álbumes:', error);
+      
+      if (error.code === 'ECONNABORTED') {
+        setMessage('La búsqueda está tardando demasiado. Verifica que el servidor esté corriendo.');
+      } else if (error.response?.status === 500) {
+        setMessage('Error interno del servidor. Verifica la consola del backend.');
+      } else {
+        setMessage('Error al buscar álbumes: ' + (error.response?.data?.error || error.message));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función de búsqueda principal
+  const handleSearch = () => {
+    if (searchType === 'artist') {
+      searchArtists();
+    } else {
+      searchAlbums();
+    }
+  };
+
   // Obtener canciones del artista
   const fetchArtistTracks = async (artistId) => {
     setLoading(true);
     setTracks([]);
-    setAlbums([]); // 👈 Limpiar álbumes
     setSelectedTrack(null);
     setSelectedAlbum(null);
-    setContentType('tracks');
     setCurrentPage(1);
     
     try {
@@ -160,7 +208,7 @@ const Resenas = () => {
       setTracks(response.data.tracks || []);
       setTotalPages(Math.ceil(response.data.tracks.length / itemsPerPage));
       setMessage(response.data.tracks?.length ? '' : 'No se encontraron canciones');
-      setActiveTab('content');
+      setActiveTab('tracks');
     } catch (error) {
       if (error.code === 'ECONNABORTED') {
         setMessage('La carga de canciones está tardando más de lo normal. Intenta con otro artista.');
@@ -173,60 +221,36 @@ const Resenas = () => {
     }
   };
 
-  // 👇 NUEVA FUNCIÓN: Obtener álbumes del artista
-  const fetchArtistAlbums = async (artistId) => {
-    setLoading(true);
-    setAlbums([]);
-    setTracks([]); // 👈 Limpiar canciones
-    setSelectedTrack(null);
-    setSelectedAlbum(null);
-    setContentType('albums');
-    setCurrentPage(1);
-    
-    try {
-      const response = await axios.get(`http://localhost:5000/albumes-artista?id=${artistId}`, {
-        timeout: 30000
-      });
-      
-      setSelectedArtist({
-        ...response.data.artist,
-        id: artistId
-      });
-      setAlbums(response.data.albums || []);
-      setTotalPages(Math.ceil(response.data.albums.length / itemsPerPage));
-      setMessage(response.data.albums?.length ? '' : 'No se encontraron álbumes');
-      setActiveTab('content');
-    } catch (error) {
-      if (error.code === 'ECONNABORTED') {
-        setMessage('La carga de álbumes está tardando más de lo normal. Intenta con otro artista.');
-      } else {
-        setMessage('Error al obtener álbumes del artista');
-      }
-      console.error('Error obteniendo álbumes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Seleccionar artista
   const handleSelectArtist = (artist) => {
     setSelectedArtist(artist);
     setSearchTerm(artist.name);
     setArtists([]);
-    // Por defecto cargar canciones, pero el usuario puede cambiar a álbumes
     fetchArtistTracks(artist.id);
   };
 
-  // 👇 NUEVA FUNCIÓN: Cambiar entre canciones y álbumes
-  const switchContentType = (type) => {
-    setContentType(type);
-    setCurrentPage(1);
-    
-    if (type === 'tracks' && tracks.length === 0 && selectedArtist) {
-      fetchArtistTracks(selectedArtist.id);
-    } else if (type === 'albums' && albums.length === 0 && selectedArtist) {
-      fetchArtistAlbums(selectedArtist.id);
-    }
+  // Seleccionar álbum de búsqueda directa
+  const handleSelectAlbum = (album) => {
+    const simulatedAlbum = {
+      id: album.id_spotify || album.id_album,
+      name: album.titulo,
+      artist: album.artista,
+      image: album.imagen_url,
+      year: album.fecha_lanzamiento ? album.fecha_lanzamiento.substring(0, 4) : 'Desconocido'
+    };
+
+    const simulatedArtist = {
+      id: `artist-${Date.now()}`,
+      name: album.artista,
+      image: album.imagen_url,
+      genres: [],
+      followers: 0
+    };
+
+    setSelectedArtist(simulatedArtist);
+    setSelectedAlbum(simulatedAlbum);
+    setSelectedTrack(null);
+    setActiveTab('review');
   };
 
   const submitReview = async (e) => {
@@ -270,7 +294,7 @@ const Resenas = () => {
       setReview('');
       setSelectedTrack(null);
       setSelectedAlbum(null);
-      setActiveTab('content');
+      setActiveTab('search');
     } catch (error) {
       if (error.response?.status === 401) {
         setMessage('Sesión expirada. Por favor inicia sesión nuevamente.');
@@ -285,85 +309,61 @@ const Resenas = () => {
     }
   };
 
-  const crearPlaylistSpotify = async () => {
+const crearPlaylistSpotify = async () => {
     try {
-      setLoading(true);
-      setMessage('🎵 Buscando tus canciones más positivas...');
+        setLoading(true);
+        setMessage('🎵 Buscando tus canciones más positivas...');
 
-      // 1. Primero probar conexión básica
-      try {
-        console.log('🔍 Probando conexión con el servidor...');
-        const healthResponse = await fetch('http://localhost:5000/health', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
+        console.log('📨 Creando playlist con canciones positivas...');
         
-        if (healthResponse.ok) {
-          console.log('✅ Servidor conectado correctamente');
-        } else {
-          setMessage('❌ Servidor no responde correctamente');
-          setLoading(false);
-          return;
+        const response = await fetch('http://localhost:5000/create-playlist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        console.log('📊 Estado de la respuesta:', response.status);
+        
+        const data = await response.json();
+        console.log('📊 Respuesta completa del servidor:', data);
+        
+        if (!response.ok) {
+            // 🔥 MANEJO MEJORADO DE ERROR 401 - REDIRECCIÓN INMEDIATA
+            if (response.status === 401 && data.auth_required && data.auth_url) {
+                console.log("🔐 Redirigiendo a autenticación de Spotify...");
+                setMessage('🔑 Redirigiendo a Spotify para autenticación...');
+                // Redirigir inmediatamente sin setTimeout
+                window.location.href = data.auth_url;
+                return;
+            }
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
         }
-      } catch (healthError) {
-        setMessage('❌ No se puede conectar al servidor');
-        setLoading(false);
-        return;
-      }
 
-      // 2. Crear playlist CON CANCIONES POSITIVAS
-      console.log('📨 Creando playlist con canciones positivas...');
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/create-playlist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      console.log('📊 Estado de la respuesta:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Respuesta del servidor:', data);
-
-      if (data.action_required === "spotify_auth") {
-        setMessage('🔑 Redirigiendo a Spotify para autenticación...');
-        setTimeout(() => {
-          window.location.href = data.auth_url;
-        }, 1000);
-      } else if (data.message) {
+        // Si llegamos aquí, la playlist se creó exitosamente
+        console.log('✅ Playlist creada exitosamente:', data);
         setMessage(`✅ ${data.message}`);
+        
         if (data.playlist_url) {
-          setTimeout(() => {
-            window.open(data.playlist_url, '_blank');
-          }, 1500);
+            setTimeout(() => {
+                window.open(data.playlist_url, '_blank');
+            }, 1500);
         }
-      } else {
-        setMessage('❌ Respuesta inesperada del servidor');
-      }
-      
+        
     } catch (error) {
-      console.error('❌ Error completo:', error);
-      
-      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        setMessage('🌐 Error de red: No se pudo conectar al servidor');
-      } else if (error.message.includes('HTTP error')) {
-        setMessage(`❌ Error del servidor: ${error.message}`);
-      } else {
-        setMessage(`❌ Error: ${error.message}`);
-      }
+        console.error('❌ Error completo:', error);
+        
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            setMessage('🌐 Error de red: No se pudo conectar al servidor');
+        } else if (error.message.includes('HTTP error')) {
+            setMessage(`❌ Error del servidor: ${error.message}`);
+        } else {
+            setMessage(`❌ Error: ${error.message}`);
+        }
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   // Paginación
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -374,7 +374,7 @@ const Resenas = () => {
   return (
     <div className="min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)]">
       <div className="container mx-auto px-4 py-6 max-w-6xl">
-        {/* Header */}
+        {/* Header con botones */}
         <header className="flex justify-between items-center mb-8">     
           <nav className="flex items-center gap-4">
             <button 
@@ -401,7 +401,7 @@ const Resenas = () => {
               onClick={() => setActiveTab('search')}
               className="text-white"
             >
-              Buscar Artista
+              Buscar
             </Tab>
             <Tab 
               isActive={activeTab === 'artists' && artists.length > 0} 
@@ -412,12 +412,20 @@ const Resenas = () => {
               Artistas
             </Tab>
             <Tab 
-              isActive={activeTab === 'content' && (tracks.length > 0 || albums.length > 0)} 
-              onClick={() => (tracks.length > 0 || albums.length > 0) && setActiveTab('content')}
-              disabled={tracks.length === 0 && albums.length === 0}
+              isActive={activeTab === 'tracks' && tracks.length > 0} 
+              onClick={() => tracks.length > 0 && setActiveTab('tracks')}
+              disabled={tracks.length === 0}
               className="text-white"
             >
-              {contentType === 'tracks' ? 'Canciones' : 'Álbumes'}
+              Canciones
+            </Tab>
+            <Tab 
+              isActive={activeTab === 'albumResults' && albums.length > 0} 
+              onClick={() => albums.length > 0 && setActiveTab('albumResults')}
+              disabled={albums.length === 0}
+              className="text-white"
+            >
+              Álbumes
             </Tab>
             <Tab 
               isActive={activeTab === 'review' && (selectedTrack || selectedAlbum)}
@@ -435,19 +443,48 @@ const Resenas = () => {
           {/* Pestaña de búsqueda */}
           {activeTab === 'search' && (
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-white mb-4">Buscar Artista</h2>
+              <h2 className="text-3xl font-bold text-white mb-4">Buscar</h2>
+              
+              {/* Selector de tipo de búsqueda */}
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={() => setSearchType('artist')}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                    searchType === 'artist'
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25'
+                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  }`}
+                >
+                  🎤 Buscar Artista
+                </button>
+                <button
+                  onClick={() => setSearchType('album')}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                    searchType === 'album'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25'
+                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  }`}
+                >
+                  💿 Buscar Álbum
+                </button>
+              </div>
+
               <div className="flex flex-col md:flex-row gap-4">
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && searchArtists()}
-                  placeholder="Busca un artista (ej. The Beatles, ABBA)..."
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder={
+                    searchType === 'artist' 
+                      ? "Busca un artista (ej. The Beatles, ABBA)..."
+                      : "Busca un álbum (ej. Abbey Road, Thriller)..."
+                  }
                   className="flex-1 p-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all"
                   disabled={loading}
                 />
                 <button 
-                  onClick={searchArtists}
+                  onClick={handleSearch}
                   disabled={loading || !searchTerm.trim()}
                   className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 rounded-xl font-medium disabled:opacity-50 transition-all shadow-lg hover:shadow-purple-500/25"
                 >
@@ -457,7 +494,7 @@ const Resenas = () => {
                       Buscando...
                     </div>
                   ) : (
-                    'Buscar Artista'
+                    `Buscar ${searchType === 'artist' ? 'Artista' : 'Álbum'}`
                   )}
                 </button>
               </div>
@@ -503,10 +540,9 @@ const Resenas = () => {
             </div>
           )}
 
-          {/* Pestaña de contenido (canciones o álbumes) */}
-          {activeTab === 'content' && selectedArtist && (
+          {/* Pestaña de canciones */}
+          {activeTab === 'tracks' && selectedArtist && (
             <div className="space-y-6">
-              {/* Header del artista */}
               <div className="flex flex-col md:flex-row gap-6 items-center md:items-start mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
                 {selectedArtist.image && (
                   <img 
@@ -527,146 +563,116 @@ const Resenas = () => {
                       <span className="font-medium text-white">Seguidores:</span> {new Intl.NumberFormat().format(selectedArtist.followers)}
                     </p>
                     <p className="text-purple-300">
-                      <span className="font-medium text-white">
-                        {contentType === 'tracks' ? 'Canciones:' : 'Álbumes:'}
-                      </span> {contentType === 'tracks' ? tracks.length : albums.length} encontrados
+                      <span className="font-medium text-white">Canciones:</span> {tracks.length} encontradas
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Selector de tipo de contenido */}
-              <div className="flex gap-4 mb-6">
-                <button
-                  onClick={() => switchContentType('tracks')}
-                  className={`px-6 py-3 rounded-xl font-medium transition-all ${
-                    contentType === 'tracks'
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25'
-                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                  }`}
-                >
-                  🎵 Canciones
-                </button>
-                <button
-                  onClick={() => switchContentType('albums')}
-                  className={`px-6 py-3 rounded-xl font-medium transition-all ${
-                    contentType === 'albums'
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/25'
-                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                  }`}
-                >
-                  💿 Álbumes
-                </button>
-              </div>
-
-              {/* Lista de canciones */}
-              {contentType === 'tracks' && currentTracks.length > 0 && (
-                <>
-                  <h3 className="text-2xl font-bold text-white mb-6">Canciones</h3>
-                  <div className="space-y-4">
-                    {currentTracks.map(track => (
-                      <div
-                        key={track.id}
-                        onClick={() => {
-                          setSelectedTrack(track);
-                          setSelectedAlbum(null);
-                          setActiveTab('review');
-                        }}
-                        className={`p-4 rounded-xl cursor-pointer transition-all flex items-center gap-4 group ${
-                          selectedTrack?.id === track.id 
-                            ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/50 shadow-lg shadow-purple-500/10' 
-                            : 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-400/30 hover:shadow-lg hover:shadow-purple-500/10'
-                        }`}
-                      >
-                        {track.album_image && (
-                          <img 
-                            src={track.album_image} 
-                            alt={track.album}
-                            className="w-16 h-16 rounded-xl object-cover flex-shrink-0 group-hover:scale-110 transition-transform"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-lg text-white truncate mb-1">{track.name}</h4>
-                          <p className="text-purple-300 truncate text-sm">
-                            {track.artists.join(', ')} • {track.album}
-                          </p>
-                          {track.is_top_track && (
-                            <span className="inline-block mt-2 text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2 py-1 rounded-full">
-                              ⭐ Popular
-                            </span>
-                          )}
-                        </div>
-                        {track.preview_url && (
-                          <audio 
-                            controls
-                            className="hidden sm:block h-8 bg-white/10 rounded-lg"
-                            src={track.preview_url}
-                            onPlay={(e) => {
-                              document.querySelectorAll('audio').forEach(a => {
-                                if (a !== e.target) a.pause();
-                              });
-                            }}
-                          />
+              <h3 className="text-2xl font-bold text-white mb-6">Canciones</h3>
+              
+              {currentTracks.length > 0 ? (
+                <div className="space-y-4">
+                  {currentTracks.map(track => (
+                    <div
+                      key={track.id}
+                      onClick={() => {
+                        setSelectedTrack(track);
+                        setSelectedAlbum(null);
+                        setActiveTab('review');
+                      }}
+                      className={`p-4 rounded-xl cursor-pointer transition-all flex items-center gap-4 group ${
+                        selectedTrack?.id === track.id 
+                          ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/50 shadow-lg shadow-purple-500/10' 
+                          : 'bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-400/30 hover:shadow-lg hover:shadow-purple-500/10'
+                      }`}
+                    >
+                      {track.album_image && (
+                        <img 
+                          src={track.album_image} 
+                          alt={track.album}
+                          className="w-16 h-16 rounded-xl object-cover flex-shrink-0 group-hover:scale-110 transition-transform"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-lg text-white truncate mb-1">{track.name}</h4>
+                        <p className="text-purple-300 truncate text-sm">
+                          {track.artists.join(', ')} • {track.album}
+                        </p>
+                        {track.is_top_track && (
+                          <span className="inline-block mt-2 text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2 py-1 rounded-full">
+                            ⭐ Popular
+                          </span>
                         )}
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Lista de álbumes */}
-              {contentType === 'albums' && currentAlbums.length > 0 && (
-                <>
-                  <h3 className="text-2xl font-bold text-white mb-6">Álbumes</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {currentAlbums.map(album => (
-                      <div
-                        key={album.id}
-                        onClick={() => {
-                          setSelectedAlbum(album);
-                          setSelectedTrack(null);
-                          setActiveTab('review');
-                        }}
-                        className={`bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 group ${
-                          selectedAlbum?.id === album.id 
-                            ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/50 shadow-lg shadow-blue-500/10' 
-                            : ''
-                        }`}
-                      >
-                        {album.image && (
-                          <img 
-                            src={album.image} 
-                            alt={album.name}
-                            className="w-full aspect-square rounded-xl object-cover mb-4 group-hover:scale-105 transition-transform"
-                          />
-                        )}
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-lg text-white truncate">{album.name}</h4>
-                          <p className="text-blue-300 text-sm">{album.artist}</p>
-                          {album.year && (
-                            <p className="text-gray-400 text-xs">📅 {album.year}</p>
-                          )}
-                          {album.tracks && (
-                            <p className="text-gray-400 text-xs">🎵 {album.tracks} canciones</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Mensaje si no hay contenido */}
-              {(contentType === 'tracks' && currentTracks.length === 0) || 
-               (contentType === 'albums' && currentAlbums.length === 0) && (
+                      {track.preview_url && (
+                        <audio 
+                          controls
+                          className="hidden sm:block h-8 bg-white/10 rounded-lg"
+                          src={track.preview_url}
+                          onPlay={(e) => {
+                            document.querySelectorAll('audio').forEach(a => {
+                              if (a !== e.target) a.pause();
+                            });
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-400 text-lg">
-                    {contentType === 'tracks' ? 'No se encontraron canciones' : 'No se encontraron álbumes'}
-                  </p>
+                  <p className="text-gray-400 text-lg">No se encontraron canciones</p>
                 </div>
               )}
 
-              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-8">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Pestaña de resultados de álbumes */}
+          {activeTab === 'albumResults' && albums.length > 0 && (
+            <div className="space-y-6">
+              <h2 className="text-3xl font-bold text-white mb-6">Álbumes Encontrados</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {currentAlbums.map(album => (
+                  <div
+                    key={album.id_spotify || album.id_album}
+                    onClick={() => handleSelectAlbum(album)}
+                    className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 group"
+                  >
+                    {album.imagen_url && (
+                      <img 
+                        src={album.imagen_url} 
+                        alt={album.titulo}
+                        className="w-full aspect-square rounded-xl object-cover mb-4 group-hover:scale-105 transition-transform"
+                      />
+                    )}
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-lg text-white truncate">{album.titulo}</h4>
+                      <p className="text-blue-300 text-sm">{album.artista}</p>
+                      {album.fecha_lanzamiento && (
+                        <p className="text-gray-400 text-xs">📅 {album.fecha_lanzamiento.substring(0, 4)}</p>
+                      )}
+                      {album.total_canciones && (
+                        <p className="text-gray-400 text-xs">🎵 {album.total_canciones} canciones</p>
+                      )}
+                      {album.existe_en_bd && (
+                        <p className="text-green-400 text-xs">✅ En nuestra base de datos</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {totalPages > 1 && (
                 <div className="flex justify-center mt-8">
                   <Pagination
@@ -682,7 +688,6 @@ const Resenas = () => {
           {/* Pestaña de reseña */}
           {activeTab === 'review' && (selectedTrack || selectedAlbum) && (
             <div className="space-y-6">
-              {/* Header de la canción o álbum */}
               <div className="flex items-center gap-6 mb-8 p-6 bg-white/5 rounded-2xl border border-white/10">
                 {(selectedTrack?.album_image || selectedAlbum?.image) && (
                   <img 
@@ -728,7 +733,7 @@ const Resenas = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveTab('content');
+                      setActiveTab('search');
                       setSelectedTrack(null);
                       setSelectedAlbum(null);
                     }}

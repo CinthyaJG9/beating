@@ -7,7 +7,7 @@ import Login from "./Login";
 import { useAuth } from "../pages/AuthContext";
 
 export default function Albumes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, savePendingSelection } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [search, setSearch] = useState("");
   const [albumes, setAlbumes] = useState([]);
@@ -79,12 +79,34 @@ export default function Albumes() {
 
   const handleCrearResena = (album) => {
     if (!isAuthenticated) {
+      // 👇 GUARDAR LA SELECCIÓN ANTES DE MOSTRAR LOGIN
+      const selection = album.existe_en_bd
+        ? {
+            selectedAlbum: {
+              id: album.id_album,
+              name: album.titulo,
+              artist: album.artista,
+              image: album.imagen_url,
+              year: formatearFecha(album.fecha_lanzamiento)
+            }
+          }
+        : {
+            spotifyAlbum: {
+              name: album.titulo,
+              artist: album.artista,
+              image: album.imagen_url,
+              year: formatearFecha(album.fecha_lanzamiento),
+              spotifyId: album.id_spotify
+            }
+          };
+      
+      savePendingSelection(selection, '/resenas');
       setShowLogin(true);
       return;
     }
     
+    // 👇 CÓDIGO ORIGINAL (cuando ya está autenticado)
     if (album.existe_en_bd) {
-      // Si el álbum ya existe en nuestra BD, redirigir directamente a reseñas
       navigate('/resenas', { 
         state: { 
           selectedAlbum: {
@@ -97,7 +119,6 @@ export default function Albumes() {
         }
       });
     } else {
-      // Para álbumes de Spotify que no están en nuestra BD
       navigate('/resenas', { 
         state: { 
           spotifyAlbum: {
@@ -387,7 +408,7 @@ export default function Albumes() {
         </div>
       )}
 
-      {showLogin && <Login onClose={() => setShowLogin(false)} />}
+      {showLogin && <Login onClose={() => setShowLogin(false)} onSwitchToRegister={() => {}} />}
     </>
   );
 }
