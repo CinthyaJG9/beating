@@ -1,5 +1,6 @@
 from flask import request, jsonify
 from database.connection import db
+import re
 
 def init_resenas_routes(app):
     
@@ -70,6 +71,13 @@ def init_resenas_routes(app):
             if not ((id_cancion and not id_album) or (not id_cancion and id_album)):
                 return jsonify({'error': 'Debe proporcionar id_cancion O id_album, no ambos'}), 400
             
+            # NUEVO: Detectar idioma y emojis
+            emojis_presentes = re.findall(r'[^\w\s,.]', texto_resena)
+            tiene_ingles = bool(re.search(r'[a-zA-Z]', texto_resena)) and not bool(re.search(r'[áéíóúñ]', texto_resena))
+            idioma = 'inglés' if tiene_ingles else 'español'
+            
+            print(f"📝 Nueva reseña - Idioma: {idioma}, Emojis: {len(emojis_presentes)}")
+            
             conn = db.get_connection()
             if not conn:
                 return jsonify({"error": "Error de conexión a la base de datos"}), 500
@@ -96,18 +104,30 @@ def init_resenas_routes(app):
             
             nueva_resena = cur.fetchone()
             
-            # Aquí podrías agregar lógica para análisis de sentimientos
-            # Por ahora creamos un sentimiento neutral por defecto
+            # NUEVO: Usar el analizador de sentimientos multilingüe
+            try:
+                from reviews.sentiment import sentiment_analyzer
+                sentimiento, puntuacion = sentiment_analyzer.analyze_text(texto_resena)
+                print(f"🎭 Sentimiento detectado: {sentimiento}, Puntuación: {puntuacion}")
+            except Exception as e:
+                print(f"⚠️ Error en análisis de sentimientos, usando neutral: {e}")
+                sentimiento, puntuacion = 'neutral', 0.5
+            
+            # Insertar sentimiento (ahora con análisis real)
             cur.execute("""
                 INSERT INTO sentimientos (id_resena, etiqueta, puntuacion) 
-                VALUES (%s, 'neutral', 0.5)
-            """, (nueva_resena[0],))
+                VALUES (%s, %s, %s)
+            """, (nueva_resena[0], sentimiento, puntuacion))
             
             conn.commit()
             
             return jsonify({
                 'id_resena': nueva_resena[0],
-                'message': 'Reseña creada exitosamente'
+                'message': 'Reseña creada exitosamente',
+                'sentimiento': sentimiento,
+                'puntuacion': puntuacion,
+                'idioma': idioma,
+                'emojis_detectados': len(emojis_presentes)
             }), 201
 
         except Exception as e:
