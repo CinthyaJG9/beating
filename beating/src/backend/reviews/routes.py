@@ -7,6 +7,7 @@ import base64
 import spacy
 from wordcloud import WordCloud, STOPWORDS
 import numpy as np
+import re
 
 from database.connection import db
 from reviews.sentiment import sentiment_analyzer
@@ -562,6 +563,37 @@ def init_reviews_routes(app):
             plt.rcParams['ytick.color'] = 'white'
             plt.rcParams['font.size'] = 12
             
+            # LISTA DE GROSERÍAS PARA CENSURA (la misma que en resenas_routes.py)
+            GROSERIAS = {
+                # Español
+                'puta', 'puto', 'mierda', 'coño', 'carajo', 'joder', 'cabrón', 'cabrona', 
+                'pendejo', 'pendeja', 'verga', 'chingar', 'chinga', 'pinche', 'culero',
+                'culera', 'pito', 'concha', 'boludo', 'pelotudo', 'gilipollas', 'hostia',
+                'cojones', 'maricón', 'maricona', 'zorra', 'idiota', 'estúpido', 'imbécil',
+                'malparido', 'hijueputa', 'hijodeputa', 'hdp', 'caradura', 'desgraciado',
+                'maldito', 'maldita', 'bastardo', 'bastarda', 'sinvergüenza', 'careverga',
+                
+                # Inglés
+                'fuck', 'shit', 'ass', 'bitch', 'dick', 'pussy', 'cock', 'cunt', 'whore',
+                'slut', 'bastard', 'motherfucker', 'fucker', 'damn', 'hell', 'piss',
+                'crap', 'douche', 'fag', 'faggot', 'retard', 'nigger', 'nigga', 'spic',
+                'kike', 'chink', 'gook', 'wop', 'bimbo', 'skank', 'hoe', 'twat', 'wanker',
+                'wank', 'jerk', 'asshole', 'dickhead', 'prick', 'shithead', 'douchebag',
+                'scumbag', 'shitbag', 'fuckface', 'dipshit', 'shitass', 'fuckwit', 'cocksucker'
+            }
+
+            def censurar_texto(texto):
+                """Censura groserías en el texto reemplazándolas con asteriscos"""
+                if not texto:
+                    return texto
+                
+                texto_censurado = texto
+                for groseria in GROSERIAS:
+                    patron = re.compile(r'\b' + re.escape(groseria) + r'\b', re.IGNORECASE)
+                    texto_censurado = patron.sub('*' * len(groseria), texto_censurado)
+                
+                return texto_censurado
+
             # 1. Obtener datos REALES de sentimientos
             cur.execute("""
                 SELECT 
@@ -604,20 +636,34 @@ def init_reviews_routes(app):
                     'reseñas': cantidad
                 })
 
-            # 3. Obtener texto para nube de palabras
+            # 3. Obtener texto para nube de palabras (ORIGINAL para análisis de IA)
             cur.execute("""
                 SELECT r.texto_resena 
                 FROM resenas r
                 JOIN sentimientos s ON r.id_resena = s.id_resena
                 LIMIT 300  
             """)
-            textos_resenas = [row[0] for row in cur.fetchall()]
+            textos_resenas_original = [row[0] for row in cur.fetchall()]
+            
+            # 4. Obtener texto censurado para estadísticas (opcional)
+            textos_resenas_censurado = [censurar_texto(texto) for texto in textos_resenas_original]
+            
+            # Contar groserías detectadas para logging
+            total_groserias = 0
+            for texto in textos_resenas_original:
+                for groseria in GROSERIAS:
+                    if re.search(r'\b' + re.escape(groseria) + r'\b', texto, re.IGNORECASE):
+                        total_groserias += 1
+            
+            if total_groserias > 0:
+                print(f"🚫 Análisis: Se detectaron {total_groserias} groserías en {len(textos_resenas_original)} reseñas")
 
             # Generar gráficos mejorados
             response_data = {
                 'mejores_canciones': mejores_canciones,
                 'distribucion_sentimientos': sentimientos_data,
-                'total_resenas_analizadas': len(textos_resenas)
+                'total_resenas_analizadas': len(textos_resenas_original),
+                'groserias_detectadas': total_groserias  # Información para monitoreo
             }
 
             if any(s['cantidad'] > 0 for s in sentimientos_data):
@@ -626,9 +672,21 @@ def init_reviews_routes(app):
             if mejores_canciones:
                 response_data['top_songs'] = generar_grafico_top_canciones_beating(mejores_canciones)
 
-            if textos_resenas:
-                response_data['wordcloud'] = generar_wordcloud_beating(textos_resenas)
-                response_data['wordcloud_info'] = f"Generado con {len(textos_resenas)} reseñas"
+            if textos_resenas_original:
+                # IMPORTANTE: Usar texto ORIGINAL para el análisis del wordcloud
+                # Esto asegura que la IA procese el contenido real para mejor precisión
+                # Las groserías aparecerán censuradas en el wordcloud visualmente
+                response_data['wordcloud'] = generar_wordcloud_beating(textos_resenas_original)
+                response_data['wordcloud_info'] = f"Generado con {len(textos_resenas_original)} reseñas"
+                
+                # Estadísticas adicionales
+                total_palabras = sum(len(texto.split()) for texto in textos_resenas_original)
+                response_data['estadisticas'] = {
+                    'total_palabras_analizadas': total_palabras,
+                    'reseñas_con_groserias': sum(1 for texto in textos_resenas_original 
+                                            if any(g in texto.lower() for g in GROSERIAS)),
+                    'porcentaje_groserias': round((total_groserias / total_palabras * 100), 2) if total_palabras > 0 else 0
+                }
 
             return jsonify(response_data), 200
 

@@ -253,61 +253,68 @@ const Resenas = () => {
     setActiveTab('review');
   };
 
-  const submitReview = async (e) => {
-    e.preventDefault();
-    if (!selectedTrack && !selectedAlbum) {
-      setMessage('Por favor selecciona una canción o álbum');
-      return;
+const submitReview = async (e) => {
+  e.preventDefault();
+  if (!selectedTrack && !selectedAlbum) {
+    setMessage('Por favor selecciona una canción o álbum');
+    return;
+  }
+  if (!review.trim()) {
+    setMessage('Por favor escribe tu reseña');
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    if (!isAuthenticated) {
+      setMessage('No estás autenticado. Por favor inicia sesión.');
+      return navigate('/login');
     }
-    if (!review.trim()) {
-      setMessage('Por favor escribe tu reseña');
-      return;
-    }
 
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!isAuthenticated) {
-        setMessage('No estás autenticado. Por favor inicia sesión.');
-        return navigate('/login');
-      }
+    const reviewData = {
+      nombre: selectedTrack ? selectedTrack.name : selectedAlbum.name,
+      artista: selectedArtist?.name || (selectedTrack ? selectedTrack.artists.join(', ') : selectedAlbum.artist),
+      contenido: review,
+      tipo: selectedTrack ? 'cancion' : 'album'
+    };
 
-      const reviewData = {
-        nombre: selectedTrack ? selectedTrack.name : selectedAlbum.name,
-        artista: selectedArtist?.name || (selectedTrack ? selectedTrack.artists.join(', ') : selectedAlbum.artist),
-        contenido: review,
-        tipo: selectedTrack ? 'cancion' : 'album'
-      };
-
-      await axios.post(
-        'http://localhost:5000/resenas',
-        reviewData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+    const response = await axios.post(
+      'http://localhost:5000/resenas',
+      reviewData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
-
-      setMessage('¡Reseña enviada con éxito!');
-      setReview('');
-      setSelectedTrack(null);
-      setSelectedAlbum(null);
-      setActiveTab('search');
-    } catch (error) {
-      if (error.response?.status === 401) {
-        setMessage('Sesión expirada. Por favor inicia sesión nuevamente.');
-        localStorage.removeItem('token');
-        navigate('/login');
-      } else {
-        setMessage(error.response?.data?.error || 'Error al enviar reseña');
       }
-      console.error('Error enviando reseña:', error);
-    } finally {
-      setLoading(false);
+    );
+
+    // NUEVO: Mensaje mejorado que indica si se censuraron groserías
+    let successMessage = '¡Reseña enviada con éxito!';
+    if (response.data.groserias_censuradas > 0) {
+      successMessage += ` 🚫 (${response.data.groserias_censuradas} palabra(s) censurada(s))`;
     }
-  };
+
+    setMessage(successMessage);
+    setReview('');
+    setSelectedTrack(null);
+    setSelectedAlbum(null);
+    setActiveTab('search');
+    
+  } catch (error) {
+    if (error.response?.status === 401) {
+      setMessage('Sesión expirada. Por favor inicia sesión nuevamente.');
+      localStorage.removeItem('token');
+      navigate('/login');
+    } else {
+      setMessage(error.response?.data?.error || 'Error al enviar reseña');
+    }
+    console.error('Error enviando reseña:', error);
+  } finally {
+    setLoading(false);
+  }
+};  
 
 const crearPlaylistSpotify = async () => {
     try {
