@@ -253,61 +253,77 @@ const Resenas = () => {
     setActiveTab('review');
   };
 
-  const submitReview = async (e) => {
-    e.preventDefault();
-    if (!selectedTrack && !selectedAlbum) {
-      setMessage('Por favor selecciona una canción o álbum');
-      return;
+const submitReview = async (e) => {
+  e.preventDefault();
+  if (!selectedTrack && !selectedAlbum) {
+    setMessage('Por favor selecciona una canción o álbum');
+    return;
+  }
+  if (!review.trim()) {
+    setMessage('Por favor escribe tu reseña');
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    if (!isAuthenticated) {
+      setMessage('No estás autenticado. Por favor inicia sesión.');
+      return navigate('/login');
     }
-    if (!review.trim()) {
-      setMessage('Por favor escribe tu reseña');
-      return;
-    }
 
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!isAuthenticated) {
-        setMessage('No estás autenticado. Por favor inicia sesión.');
-        return navigate('/login');
-      }
+    // NUEVO: Detectar si hay emojis
+    const emojiCount = (review.match(/[^\w\s,.]/g) || []).length;
+    const hasEnglish = /[a-zA-Z]/.test(review) && !/[áéíóúñ]/.test(review);
+    
+    console.log(`🌐 Reseña - Emojis: ${emojiCount}, Inglés: ${hasEnglish}`);
 
-      const reviewData = {
-        nombre: selectedTrack ? selectedTrack.name : selectedAlbum.name,
-        artista: selectedArtist?.name || (selectedTrack ? selectedTrack.artists.join(', ') : selectedAlbum.artist),
-        contenido: review,
-        tipo: selectedTrack ? 'cancion' : 'album'
-      };
+    const reviewData = {
+      nombre: selectedTrack ? selectedTrack.name : selectedAlbum.name,
+      artista: selectedArtist?.name || (selectedTrack ? selectedTrack.artists.join(', ') : selectedAlbum.artist),
+      contenido: review,
+      tipo: selectedTrack ? 'cancion' : 'album'
+    };
 
-      await axios.post(
-        'http://localhost:5000/resenas',
-        reviewData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+    const response = await axios.post(
+      'http://localhost:5000/resenas',
+      reviewData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
-
-      setMessage('¡Reseña enviada con éxito!');
-      setReview('');
-      setSelectedTrack(null);
-      setSelectedAlbum(null);
-      setActiveTab('search');
-    } catch (error) {
-      if (error.response?.status === 401) {
-        setMessage('Sesión expirada. Por favor inicia sesión nuevamente.');
-        localStorage.removeItem('token');
-        navigate('/login');
-      } else {
-        setMessage(error.response?.data?.error || 'Error al enviar reseña');
       }
-      console.error('Error enviando reseña:', error);
-    } finally {
-      setLoading(false);
+    );
+
+    // NUEVO: Mensaje mejorado con info de idioma/emojis
+    let successMessage = '¡Reseña enviada con éxito!';
+    if (emojiCount > 0) {
+      successMessage += ` 🎉 (${emojiCount} emoji${emojiCount > 1 ? 's' : ''} detectado${emojiCount > 1 ? 's' : ''})`;
     }
-  };
+    if (hasEnglish) {
+      successMessage += ' 🌍';
+    }
+
+    setMessage(successMessage);
+    setReview('');
+    setSelectedTrack(null);
+    setSelectedAlbum(null);
+    setActiveTab('search');
+    
+  } catch (error) {
+    if (error.response?.status === 401) {
+      setMessage('Sesión expirada. Por favor inicia sesión nuevamente.');
+      localStorage.removeItem('token');
+      navigate('/login');
+    } else {
+      setMessage(error.response?.data?.error || 'Error al enviar reseña');
+    }
+    console.error('Error enviando reseña:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
 const crearPlaylistSpotify = async () => {
     try {
@@ -714,19 +730,19 @@ const crearPlaylistSpotify = async () => {
                   <label htmlFor="review" className="block text-lg font-medium text-white mb-3">
                     Comparte tu opinión:
                   </label>
-                  <textarea
-                    id="review"
-                    value={review}
-                    onChange={(e) => setReview(e.target.value)}
-                    placeholder={
-                      selectedTrack 
-                        ? "¿Qué te parece esta canción? ¿Qué emociones te transmite? ¿Qué recuerdos evoca?..."
-                        : "¿Qué te parece este álbum? ¿Cómo es la experiencia completa? ¿Cuáles son tus canciones favoritas?..."
-                    }
-                    rows="8"
-                    className="w-full p-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all resize-none"
-                    required
-                  />
+<textarea
+  id="review"
+  value={review}
+  onChange={(e) => setReview(e.target.value)}
+  placeholder={
+    selectedTrack 
+      ? "¿Qué te parece esta canción? Escribe en español o inglés 😊🎵... Share your thoughts in Spanish or English 😊🎵..."
+      : "¿Qué te parece este álbum? Escribe en español o inglés 💿🌟... Share your album review in Spanish or English 💿🌟..."
+  }
+  rows="8"
+  className="w-full p-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all resize-none"
+  required
+/>
                 </div>
                 
                 <div className="flex justify-end gap-4">

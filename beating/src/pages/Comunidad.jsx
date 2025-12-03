@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { useAuth } from './AuthContext';
+import Login from './Login';
 
 const getReviewStyles = (reviewType, sentiment) => {
     const baseStyles = "rounded-lg p-3 border-l-4 font-medium ";
@@ -38,6 +39,7 @@ const getReviewMeta = (reviewType, sentiment) => {
 const Comunidad = () => {
     const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
+    const [showLogin, setShowLogin] = useState(false);
     
     // Estados para la comunidad
     const [communityUsers, setCommunityUsers] = useState([]);
@@ -58,71 +60,102 @@ const Comunidad = () => {
     const appBackground = "min-h-screen bg-[#1e1626] [background:radial-gradient(50%_50%_at_50%_50%,rgba(40,20,50,1)_0%,rgba(20,10,30,1)_100%)] text-white";
     const userCardStyle = "bg-gradient-to-br from-purple-900/40 to-pink-900/30 rounded-2xl p-6 shadow-xl border border-purple-500/30 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-purple-500/20";
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                setError(null);
+    // Función para verificar autenticación antes de cargar datos
+    const handleAuthCheck = () => {
+        if (!isAuthenticated) {
+            setShowLogin(true);
+            return false;
+        }
+        return true;
+    };
 
-                // Construir URL con parámetro para excluir usuario actual
-                const comunidadUrl = user && user.id 
-                    ? `http://localhost:5000/comunidad?exclude_user_id=${user.id}`
-                    : 'http://localhost:5000/comunidad';
+    // Función para navegar con verificación de autenticación
+    const handleNavigate = (path) => {
+        if (!isAuthenticated) {
+            setShowLogin(true);
+        } else {
+            navigate(path);
+        }
+    };
 
-                console.log('🔍 Fetching comunidad from:', comunidadUrl);
-                
-                const [communityRes, songsP, songsN, songsU, albumsP, albumsN, albumsU] = await Promise.all([
-                    axios.get(comunidadUrl).catch(e => {
-                        console.error('❌ Error fetching comunidad:', e.response?.data || e.message);
-                        // Si hay error, intentar sin excluir usuario
-                        return axios.get('http://localhost:5000/comunidad').catch(finalError => {
-                            console.error('❌ Error final fetching comunidad:', finalError.response?.data || finalError.message);
-                            return { data: { users: [] } };
-                        });
-                    }),
-                    axios.get("http://localhost:5000/api/top_songs?sentiment=positive&limit=10").catch(e => ({ data: [] })),
-                    axios.get("http://localhost:5000/api/top_songs?sentiment=negative&limit=10").catch(e => ({ data: [] })),
-                    axios.get("http://localhost:5000/api/top_songs?sentiment=neutral&limit=10").catch(e => ({ data: [] })),
-                    axios.get("http://localhost:5000/api/top_albums?sentiment=positive&limit=10").catch(e => ({ data: [] })),
-                    axios.get("http://localhost:5000/api/top_albums?sentiment=negative&limit=10").catch(e => ({ data: [] })),
-                    axios.get("http://localhost:5000/api/top_albums?sentiment=neutral&limit=10").catch(e => ({ data: [] }))
-                ]);
+    // Función para cargar datos de la comunidad (solo si está autenticado)
+    const fetchCommunityData = async () => {
+        if (!isAuthenticated) {
+            setLoading(false);
+            return;
+        }
 
-                console.log('✅ Comunidad response:', communityRes.data);
+        try {
+            setLoading(true);
+            setError(null);
 
-                if (communityRes.data && communityRes.data.users) {
-                    setCommunityUsers(communityRes.data.users); 
-                } else {
-                    setCommunityUsers([]); 
-                }
+            // Construir URL con parámetro para excluir usuario actual
+            const comunidadUrl = user && user.id 
+                ? `http://localhost:5000/comunidad?exclude_user_id=${user.id}`
+                : 'http://localhost:5000/comunidad';
 
-                const getSafeData = (res, sentiment) => {
-                    const data = res?.data || [];
-                    return data.map(item => ({ ...item, review_sentiment: sentiment })); 
-                };
+            console.log('🔍 Fetching comunidad from:', comunidadUrl);
+            
+            const [communityRes, songsP, songsN, songsU, albumsP, albumsN, albumsU] = await Promise.all([
+                axios.get(comunidadUrl).catch(e => {
+                    console.error('❌ Error fetching comunidad:', e.response?.data || e.message);
+                    // Si hay error, intentar sin excluir usuario
+                    return axios.get('http://localhost:5000/comunidad').catch(finalError => {
+                        console.error('❌ Error final fetching comunidad:', finalError.response?.data || finalError.message);
+                        return { data: { users: [] } };
+                    });
+                }),
+                axios.get("http://localhost:5000/api/top_songs?sentiment=positive&limit=10").catch(e => ({ data: [] })),
+                axios.get("http://localhost:5000/api/top_songs?sentiment=negative&limit=10").catch(e => ({ data: [] })),
+                axios.get("http://localhost:5000/api/top_songs?sentiment=neutral&limit=10").catch(e => ({ data: [] })),
+                axios.get("http://localhost:5000/api/top_albums?sentiment=positive&limit=10").catch(e => ({ data: [] })),
+                axios.get("http://localhost:5000/api/top_albums?sentiment=negative&limit=10").catch(e => ({ data: [] })),
+                axios.get("http://localhost:5000/api/top_albums?sentiment=neutral&limit=10").catch(e => ({ data: [] }))
+            ]);
 
-                setAllSongs([
-                    ...getSafeData(songsP, 'positive'), 
-                    ...getSafeData(songsN, 'negative'), 
-                    ...getSafeData(songsU, 'neutral')
-                ]);
-                setAllAlbums([
-                    ...getSafeData(albumsP, 'positive'), 
-                    ...getSafeData(albumsN, 'negative'), 
-                    ...getSafeData(albumsU, 'neutral')
-                ]);
+            console.log('✅ Comunidad response:', communityRes.data);
 
-            } catch (err) {
-                console.error("❌ Error fetching data:", err);
-                setError('Error al cargar datos. Verifica la conexión con el servidor Flask.');
-            } finally {
-                setLoading(false);
+            if (communityRes.data && communityRes.data.users) {
+                setCommunityUsers(communityRes.data.users); 
+            } else {
+                setCommunityUsers([]); 
             }
-        };
 
-        fetchData();
-    }, [user]);
-    
+            const getSafeData = (res, sentiment) => {
+                const data = res?.data || [];
+                return data.map(item => ({ ...item, review_sentiment: sentiment })); 
+            };
+
+            setAllSongs([
+                ...getSafeData(songsP, 'positive'), 
+                ...getSafeData(songsN, 'negative'), 
+                ...getSafeData(songsU, 'neutral')
+            ]);
+            setAllAlbums([
+                ...getSafeData(albumsP, 'positive'), 
+                ...getSafeData(albumsN, 'negative'), 
+                ...getSafeData(albumsU, 'neutral')
+            ]);
+
+        } catch (err) {
+            console.error("❌ Error fetching data:", err);
+            setError('Error al cargar datos. Verifica la conexión con el servidor Flask.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchCommunityData();
+        } else {
+            setLoading(false);
+            setCommunityUsers([]);
+            setAllSongs([]);
+            setAllAlbums([]);
+        }
+    }, [user, isAuthenticated]);
+
     const obtenerInicial = (nombre) => {
         return nombre ? nombre.charAt(0).toUpperCase() : "U";
     };
@@ -158,6 +191,69 @@ const Comunidad = () => {
         }
     }
 
+    // Si no está autenticado, mostrar mensaje de inicio de sesión
+    if (!isAuthenticated) {
+        return (
+            <div className={appBackground}>
+                <div className="container mx-auto px-6 py-12 max-w-7xl pt-24">
+                    <header className="text-center mb-10">
+                        <h1 className="text-5xl font-extrabold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                            Comunidad Beating
+                        </h1>
+                        <p className="text-xl text-gray-400">Conecta con otros amantes de la música</p>
+                    </header>
+
+                    <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                        <div className="max-w-md text-center p-8 bg-white/10 rounded-2xl border border-purple-500/30 backdrop-blur-sm">
+                            <div className="text-6xl mb-4">🔒</div>
+                            <h2 className="text-2xl font-bold text-white mb-4">Acceso Restringido</h2>
+                            <p className="text-gray-300 mb-6">
+                                La comunidad de Beating es exclusiva para usuarios registrados. 
+                                Inicia sesión o regístrate para ver los perfiles de otros usuarios, 
+                                contenido popular y participar en la comunidad.
+                            </p>
+                            
+                            <div className="flex flex-col gap-4">
+                                <Button
+                                    onClick={() => setShowLogin(true)}
+                                    className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white py-3 rounded-xl text-lg font-bold"
+                                >
+                                    Iniciar Sesión
+                                </Button>
+                                
+                                <Button
+                                    onClick={() => navigate('/register')}
+                                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl text-lg font-bold"
+                                >
+                                    Crear Cuenta
+                                </Button>
+                                
+                                <Button
+                                    onClick={() => navigate('/')}
+                                    variant="outline"
+                                    className="border border-white/30 text-white hover:bg-white/10 py-3 rounded-xl"
+                                >
+                                    Volver al Inicio
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {showLogin && (
+                    <Login 
+                        onClose={() => setShowLogin(false)}
+                        onSwitchToRegister={() => {
+                            setShowLogin(false);
+                            navigate('/register');
+                        }}
+                    />
+                )}
+            </div>
+        );
+    }
+
+    // Código existente para usuarios autenticados
     if (loading) return (
         <div className={`flex items-center justify-center h-screen ${appBackground}`}>
             <div className="text-center">
@@ -185,6 +281,11 @@ const Comunidad = () => {
                         Comunidad Beating
                     </h1>
                     <p className="text-xl text-gray-400">Encuentra usuarios y el contenido más popular.</p>
+                    
+                    {/* Indicador de usuario autenticado */}
+                    <div className="mt-4 inline-flex items-center gap-2 bg-green-900/30 text-green-300 px-4 py-2 rounded-full border border-green-700/50">
+                        <span className="text-sm">✅ Conectado como: {user?.nombre_usuario || 'Usuario'}</span>
+                    </div>
                 </header>
                 
                 {/* Selector de Pestañas */}
@@ -269,7 +370,7 @@ const Comunidad = () => {
                                             </div>
                                         
                                             <Button
-                                                onClick={() => navigate(`/perfil/${user.id}`)}
+                                                onClick={() => handleNavigate(`/perfil/${user.id}`)}
                                                 className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl shadow-md transition-all duration-300"
                                             >
                                                 Ver Perfil
@@ -369,14 +470,24 @@ const Comunidad = () => {
                                                         </div>
                                                     </div>
                                                 </div>)}
-                                                <Button onClick={(e) => {e.stopPropagation(); navigate(`/resenas?track=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`);}} className="mt-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white w-full text-sm transition-all duration-300 shadow-lg hover:shadow-purple-500/25">👁️ Ver Reseñas</Button>
+                                                <Button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); 
+                                                        handleNavigate(`/resenas?track=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`);
+                                                    }} 
+                                                    className="mt-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white w-full text-sm transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
+                                                >
+                                                    👁️ Ver Reseñas
+                                                </Button>
                                             </CardContent>
                                         </Card>
                                     );
                                 })}
                             </div>
                         ) : (
-                            <div className="text-center py-16 bg-purple-500/10 rounded-2xl border border-purple-500/20 backdrop-blur-sm"><p className="text-2xl text-gray-400 mb-6">No hay canciones {getFilterTitle(activeFilter)}.</p></div>
+                            <div className="text-center py-16 bg-purple-500/10 rounded-2xl border border-purple-500/20 backdrop-blur-sm">
+                                <p className="text-2xl text-gray-400 mb-6">No hay canciones {getFilterTitle(activeFilter)}.</p>
+                            </div>
                         )}
 
                         {/* Sección Álbumes */}
@@ -435,6 +546,16 @@ const Comunidad = () => {
                     </section>
                 )}
             </div>
+
+            {showLogin && (
+                <Login 
+                    onClose={() => setShowLogin(false)}
+                    onSwitchToRegister={() => {
+                        setShowLogin(false);
+                        navigate('/register');
+                    }}
+                />
+            )}
         </div>
     );
 };
