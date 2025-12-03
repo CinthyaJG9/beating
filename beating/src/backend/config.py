@@ -2,7 +2,7 @@ import os
 
 # Configuración de la base de datos
 DATABASE_CONFIG = {
-    'dsn': "dbname=beating user=postgres password=admin host=localhost port=5432",
+    'dsn': "dbname=beating_bd user=postgres password=admin host=localhost port=5432",
     'pool_min': 1,
     'pool_max': 20
 }
