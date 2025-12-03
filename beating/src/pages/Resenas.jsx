@@ -272,7 +272,6 @@ const submitReview = async (e) => {
       return navigate('/login');
     }
 
-<<<<<<< HEAD
     // NUEVO: Detectar si hay emojis
     const emojiCount = (review.match(/[^\w\s,.]/g) || []).length;
     const hasEnglish = /[a-zA-Z]/.test(review) && !/[áéíóúñ]/.test(review);
@@ -286,15 +285,6 @@ const submitReview = async (e) => {
       tipo: selectedTrack ? 'cancion' : 'album'
     };
 
-=======
-    const reviewData = {
-      nombre: selectedTrack ? selectedTrack.name : selectedAlbum.name,
-      artista: selectedArtist?.name || (selectedTrack ? selectedTrack.artists.join(', ') : selectedAlbum.artist),
-      contenido: review,
-      tipo: selectedTrack ? 'cancion' : 'album'
-    };
-
->>>>>>> 9751b37b4f23f2ae41c1c71872fa14eedbc1c691
     const response = await axios.post(
       'http://localhost:5000/resenas',
       reviewData,
@@ -306,7 +296,6 @@ const submitReview = async (e) => {
       }
     );
 
-<<<<<<< HEAD
     // NUEVO: Mensaje mejorado con info de idioma/emojis
     let successMessage = '¡Reseña enviada con éxito!';
     if (emojiCount > 0) {
@@ -315,13 +304,6 @@ const submitReview = async (e) => {
     if (hasEnglish) {
       successMessage += ' 🌍';
     }
-=======
-    // NUEVO: Mensaje mejorado que indica si se censuraron groserías
-    let successMessage = '¡Reseña enviada con éxito!';
-    if (response.data.groserias_censuradas > 0) {
-      successMessage += ` 🚫 (${response.data.groserias_censuradas} palabra(s) censurada(s))`;
-    }
->>>>>>> 9751b37b4f23f2ae41c1c71872fa14eedbc1c691
 
     setMessage(successMessage);
     setReview('');
@@ -341,11 +323,7 @@ const submitReview = async (e) => {
   } finally {
     setLoading(false);
   }
-<<<<<<< HEAD
 };
-=======
-};  
->>>>>>> 9751b37b4f23f2ae41c1c71872fa14eedbc1c691
 
 const crearPlaylistSpotify = async () => {
     try {
