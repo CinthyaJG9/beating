@@ -10,83 +10,95 @@ export default function Login({ onClose, onSwitchToRegister }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
   const { login, getPendingSelection } = useAuth();
 
+  const isValidEmail = (value) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(value);
+  };
+
+  const isValidPassword = (value) => {
+    return value.length >= 6;
+  };
+
+  const canSubmit = () => {
+    return (
+      isValidEmail(email.trim()) &&
+      isValidPassword(password.trim()) &&
+      !loading
+    );
+  };
+
   const handleLogin = async () => {
+    if (!canSubmit()) {
+      setError("Revisa tus credenciales.");
+      return;
+    }
+
     setLoading(true);
     setError("");
-    
+
     try {
-      const response = await fetch('http://localhost:5000/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("http://localhost:5000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email,
-          password
-        })
+          email: email.trim(),
+          password: password.trim(),
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        console.log('✅ Login exitoso:', data);
-        
         const userData = {
           id: data.user?.id || data.user_id || data.id,
-          username: data.user?.username || data.user?.email || data.username || email.split('@')[0]
+          username:
+            data.user?.username ||
+            data.user?.email ||
+            data.username ||
+            email.split("@")[0],
         };
 
-        // Hacer login
         login(data.token, userData);
-        
-        // 👇 OBTENER LA SELECCIÓN PENDIENTE DESPUÉS DEL LOGIN
+
         const { selection, redirect } = getPendingSelection();
-        
         if (selection) {
-          console.log('🔍 Selección pendiente encontrada, redirigiendo...', selection);
-          // 👇 REDIRIGIR A RESEÑAS CON LA SELECCIÓN GUARDADA
-          navigate(redirect || '/resenas', { state: selection });
+          navigate(redirect || "/resenas", { state: selection });
         } else {
-          console.log('🔍 No hay selección pendiente, redirigiendo a reseñas');
-          // Si no hay selección pendiente, redirigir a reseñas
-          navigate('/resenas');
+          navigate("/resenas");
         }
-        
-        // Cerrar modal si existe
+
         if (onClose) onClose();
-        
       } else {
-        setError(data.error || 'Error en las credenciales');
+        setError(data.error || "Credenciales incorrectas.");
       }
-    } catch (error) {
-      console.error('❌ Error completo:', error);
-      setError('No se pudo conectar al servidor. Verifica que el backend esté corriendo.');
+    } catch (err) {
+      console.error("❌ Error completo:", err);
+      setError(
+        "No se pudo conectar al servidor. Verifica que el backend esté corriendo."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter" && canSubmit()) {
       handleLogin();
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Fondo borroso con overlay */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/60 backdrop-blur-md"
         onClick={onClose}
       />
-      
-      {/* Modal */}
+
       <div className="relative bg-gray-900/95 border border-gray-700 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl">
-        {/* Botón cerrar */}
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-gray-400 hover:text-white transition-colors"
@@ -99,7 +111,6 @@ export default function Login({ onClose, onSwitchToRegister }) {
             Iniciar Sesión
           </h2>
 
-          {/* Mensaje de error */}
           {error && (
             <div className="text-red-400 text-sm text-center bg-red-400/10 py-2 px-3 rounded-lg border border-red-400/30">
               {error}
@@ -107,30 +118,46 @@ export default function Login({ onClose, onSwitchToRegister }) {
           )}
 
           <div className="space-y-2">
-            <label htmlFor="email" className="text-white block text-sm font-medium">
+            <label
+              htmlFor="email"
+              className="text-white block text-sm font-medium"
+            >
               Correo Electrónico
             </label>
             <Input
               id="email"
               type="email"
-              className="bg-gray-800 border-gray-600 text-white h-12 focus:border-purple-500"
+              className={`bg-gray-800 border-gray-600 text-white h-12 focus:border-purple-500 ${
+                email && !isValidEmail(email) ? "border-red-500" : ""
+              }`}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError("");
+              }}
               onKeyPress={handleKeyPress}
               placeholder="tu@email.com"
             />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="text-white block text-sm font-medium">
+            <label
+              htmlFor="password"
+              className="text-white block text-sm font-medium"
+            >
               Contraseña
             </label>
             <Input
               id="password"
               type="password"
-              className="bg-gray-800 border-gray-600 text-white h-12 focus:border-purple-500"
+              className={`bg-gray-800 border-gray-600 text-white h-12 focus:border-purple-500 ${
+                password && !isValidPassword(password) ? "border-red-500" : ""
+              }`}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
               onKeyPress={handleKeyPress}
               placeholder="••••••••"
             />
@@ -138,7 +165,7 @@ export default function Login({ onClose, onSwitchToRegister }) {
 
           <Button
             onClick={handleLogin}
-            disabled={loading}
+            disabled={!canSubmit()}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-12 font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
