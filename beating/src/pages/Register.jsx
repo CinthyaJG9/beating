@@ -1,8 +1,8 @@
 // src/pages/Register.jsx
 import { Button } from "./../components/ui/button";
 import { Input } from "../components/ui/input";
-import { X, Music, Heart, Shield, BookOpen } from "lucide-react";
-import React, { useState } from "react";
+import { X, Music, Heart, Shield, BookOpen, Eye, EyeOff, CheckCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../pages/AuthContext";
 
@@ -11,55 +11,201 @@ export default function Register({ onClose, onSwitchToLogin }) {
     nombre_usuario: "",
     correo: "",
     contrasena: "",
+    confirmarContrasena: "",
     aceptaTerminos: false,
   });
 
   const [mensaje, setMensaje] = useState("");
   const [mostrarTerminos, setMostrarTerminos] = useState(false);
-  const {login} = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const { login } = useAuth();
+
+  // Validar fortaleza de contraseña
+  const checkPasswordStrength = (password) => {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    return strength;
+  };
+
+  // Validaciones en tiempo real
+  useEffect(() => {
+    const newErrors = {};
+    
+    // Validar nombre de usuario
+    if (form.nombre_usuario && !/^[a-zA-Z0-9_]{3,20}$/.test(form.nombre_usuario)) {
+      newErrors.nombre_usuario = "Solo letras, números y guiones bajos (3-20 caracteres)";
+    }
+    
+    // Validar email
+    if (form.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
+      newErrors.correo = "Formato de email inválido";
+    }
+    
+    // Validar contraseña
+    if (form.contrasena) {
+      const strength = checkPasswordStrength(form.contrasena);
+      setPasswordStrength(strength);
+      
+      if (form.contrasena.length < 8) {
+        newErrors.contrasena = "Mínimo 8 caracteres";
+      } else if (strength < 3) {
+        newErrors.contrasena = "Contraseña demasiado débil";
+      }
+    }
+    
+    // Validar confirmación
+    if (form.confirmarContrasena && form.contrasena !== form.confirmarContrasena) {
+      newErrors.confirmarContrasena = "Las contraseñas no coinciden";
+    }
+    
+    setErrors(newErrors);
+  }, [form]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({ ...form, [name]: type === "checkbox" ? checked : value });
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setMensaje("");
-
-  if (!form.aceptaTerminos) {
-    setMensaje("❌ Debes aceptar los términos y condiciones.");
-    return;
-  }
-
-  try {
-    const res = await axios.post("http://localhost:5000/register", form);
-
-    // ✅ OBTENER TOKEN Y USER QUE REGRESA EL BACKEND
-    const { token, user } = res.data;
-
-    // ✅ INICIAR SESIÓN AUTOMÁTICAMENTE
-    login(token, {
-      id: user.id,
-      username: user.nombre_usuario || user.username,
-      email: user.correo
-    });
-
-    setMensaje("✅ Registro exitoso! Redirigiendo...");
-
-    setTimeout(() => {
-      onClose();
-      window.location.href = "/resenas"; // O navigate('/resenas')
-    }, 1200);
-
-  } catch (err) {
-    if (err.response) {
-      setMensaje("❌ Error: " + err.response.data.error);
-    } else {
-      setMensaje("❌ Error en el servidor.");
+  // Validación antes de enviar
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!form.nombre_usuario.trim()) {
+      newErrors.nombre_usuario = "Nombre de usuario requerido";
+    } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.nombre_usuario)) {
+      newErrors.nombre_usuario = "Formato inválido (3-20 caracteres, solo letras, números y _)";
     }
-  }
-};
+    
+    if (!form.correo.trim()) {
+      newErrors.correo = "Email requerido";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
+      newErrors.correo = "Email inválido";
+    }
+    
+    if (!form.contrasena) {
+      newErrors.contrasena = "Contraseña requerida";
+    } else if (form.contrasena.length < 8) {
+      newErrors.contrasena = "Mínimo 8 caracteres";
+    } else if (checkPasswordStrength(form.contrasena) < 3) {
+      newErrors.contrasena = "Contraseña demasiado débil";
+    }
+    
+    if (!form.confirmarContrasena) {
+      newErrors.confirmarContrasena = "Confirma tu contraseña";
+    } else if (form.contrasena !== form.confirmarContrasena) {
+      newErrors.confirmarContrasena = "Las contraseñas no coinciden";
+    }
+    
+    if (!form.aceptaTerminos) {
+      newErrors.aceptaTerminos = "Debes aceptar los términos y condiciones";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMensaje("");
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+
+    try {
+      // Sanitizar datos antes de enviar
+      const sanitizedData = {
+        nombre_usuario: form.nombre_usuario.trim(),
+        correo: form.correo.trim().toLowerCase(),
+        contrasena: form.contrasena
+      };
+
+      const res = await axios.post("http://localhost:5000/register", sanitizedData);
+
+      // ✅ OBTENER TOKEN Y USER QUE REGRESA EL BACKEND
+      const { token, user } = res.data;
+
+      // ✅ INICIAR SESIÓN AUTOMÁTICAMENTE
+      login(token, {
+        id: user.id,
+        username: user.nombre_usuario || user.username,
+        email: user.correo || user.email
+      });
+
+      setMensaje("✅ Registro exitoso! Redirigiendo...");
+
+      setTimeout(() => {
+        onClose();
+        window.location.href = "/resenas"; // O navigate('/resenas')
+      }, 1200);
+
+    } catch (err) {
+      if (err.response) {
+        setMensaje("❌ Error: " + err.response.data.error);
+      } else {
+        setMensaje("❌ Error en el servidor.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Indicador de fortaleza de contraseña
+  const PasswordStrengthIndicator = () => {
+    const strengthLabels = ["Muy débil", "Débil", "Media", "Fuerte", "Muy fuerte"];
+    const strengthColors = [
+      "bg-red-500",
+      "bg-orange-500",
+      "bg-yellow-500",
+      "bg-lime-500",
+      "bg-green-500"
+    ];
+    
+    return (
+      <div className="mt-2">
+        <div className="flex justify-between text-xs mb-1">
+          <span className="text-gray-400">Fortaleza:</span>
+          <span className={`font-medium ${
+            passwordStrength >= 4 ? "text-green-400" :
+            passwordStrength >= 3 ? "text-yellow-400" :
+            "text-red-400"
+          }`}>
+            {strengthLabels[passwordStrength] || "Muy débil"}
+          </span>
+        </div>
+        <div className="h-1 w-full bg-gray-700 rounded-full overflow-hidden">
+          <div 
+            className={`h-full transition-all duration-300 ${strengthColors[passwordStrength] || "bg-red-500"}`}
+            style={{ width: `${(passwordStrength / 5) * 100}%` }}
+          />
+        </div>
+        <ul className="text-xs text-gray-400 mt-2 space-y-1">
+          <li className={`flex items-center gap-1 ${form.contrasena.length >= 8 ? "text-green-400" : ""}`}>
+            <CheckCircle className="h-3 w-3" />
+            Mínimo 8 caracteres
+          </li>
+          <li className={`flex items-center gap-1 ${/[A-Z]/.test(form.contrasena) ? "text-green-400" : ""}`}>
+            <CheckCircle className="h-3 w-3" />
+            Una letra mayúscula
+          </li>
+          <li className={`flex items-center gap-1 ${/[0-9]/.test(form.contrasena) ? "text-green-400" : ""}`}>
+            <CheckCircle className="h-3 w-3" />
+            Un número
+          </li>
+        </ul>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -102,10 +248,16 @@ const handleSubmit = async (e) => {
                 name="nombre_usuario"
                 value={form.nombre_usuario}
                 onChange={handleChange}
-                className="bg-gray-800/50 border-gray-600 text-white h-12 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                className={`bg-gray-800/50 border-gray-600 text-white h-12 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 ${
+                  errors.nombre_usuario ? "border-red-500 focus:ring-red-500" : ""
+                }`}
                 placeholder="Tu nombre de usuario"
                 required
+                disabled={isSubmitting}
               />
+              {errors.nombre_usuario && (
+                <p className="text-red-400 text-xs mt-1">{errors.nombre_usuario}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -115,51 +267,127 @@ const handleSubmit = async (e) => {
                 name="correo"
                 value={form.correo}
                 onChange={handleChange}
-                className="bg-gray-800/50 border-gray-600 text-white h-12 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                className={`bg-gray-800/50 border-gray-600 text-white h-12 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 ${
+                  errors.correo ? "border-red-500 focus:ring-red-500" : ""
+                }`}
                 placeholder="tu@email.com"
                 required
+                disabled={isSubmitting}
               />
+              {errors.correo && (
+                <p className="text-red-400 text-xs mt-1">{errors.correo}</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <label className="text-white block text-sm font-medium">Contraseña</label>
-              <Input
-                type="password"
-                name="contrasena"
-                value={form.contrasena}
-                onChange={handleChange}
-                className="bg-gray-800/50 border-gray-600 text-white h-12 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  name="contrasena"
+                  value={form.contrasena}
+                  onChange={handleChange}
+                  className={`bg-gray-800/50 border-gray-600 text-white h-12 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 pr-10 ${
+                    errors.contrasena ? "border-red-500 focus:ring-red-500" : ""
+                  }`}
+                  placeholder="••••••••"
+                  required
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.contrasena ? (
+                <p className="text-red-400 text-xs mt-1">{errors.contrasena}</p>
+              ) : (
+                form.contrasena && <PasswordStrengthIndicator />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-white block text-sm font-medium">Confirmar Contraseña</label>
+              <div className="relative">
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmarContrasena"
+                  value={form.confirmarContrasena}
+                  onChange={handleChange}
+                  className={`bg-gray-800/50 border-gray-600 text-white h-12 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 pr-10 ${
+                    errors.confirmarContrasena ? "border-red-500 focus:ring-red-500" : ""
+                  }`}
+                  placeholder="••••••••"
+                  required
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.confirmarContrasena && (
+                <p className="text-red-400 text-xs mt-1">{errors.confirmarContrasena}</p>
+              )}
+              {form.confirmarContrasena && form.contrasena === form.confirmarContrasena && !errors.confirmarContrasena && (
+                <p className="text-green-400 text-xs mt-1 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Las contraseñas coinciden
+                </p>
+              )}
             </div>
 
             {/* Checkbox de términos */}
-            <div className="flex items-start gap-3 p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+            <div className={`flex items-start gap-3 p-3 rounded-lg border ${
+              errors.aceptaTerminos 
+                ? "bg-red-500/10 border-red-500/30" 
+                : "bg-purple-500/10 border-purple-500/20"
+            }`}>
               <input
                 type="checkbox"
                 name="aceptaTerminos"
                 checked={form.aceptaTerminos}
                 onChange={handleChange}
-                className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 focus:ring-purple-500 text-purple-500"
+                className="mt-0.5 h-4 w-4 rounded border-gray-600 bg-gray-800 focus:ring-purple-500 text-purple-500 disabled:opacity-50"
+                disabled={isSubmitting}
               />
-              <p className="text-gray-300 text-sm">
-                Acepto los{" "}
-                <button
-                  type="button"
-                  className="text-purple-400 hover:text-purple-300 font-medium underline transition-colors"
-                  onClick={() => setMostrarTerminos(true)}
-                >
-                  Términos y Condiciones
-                </button>
-              </p>
+              <div>
+                <p className="text-gray-300 text-sm">
+                  Acepto los{" "}
+                  <button
+                    type="button"
+                    className="text-purple-400 hover:text-purple-300 font-medium underline transition-colors"
+                    onClick={() => setMostrarTerminos(true)}
+                    disabled={isSubmitting}
+                  >
+                    Términos y Condiciones
+                  </button>
+                </p>
+                {errors.aceptaTerminos && (
+                  <p className="text-red-400 text-xs mt-1">{errors.aceptaTerminos}</p>
+                )}
+              </div>
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-12 font-semibold text-lg transition-all shadow-lg hover:shadow-purple-500/25"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-12 font-semibold text-lg transition-all shadow-lg hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || Object.keys(errors).length > 0}
             >
-              Crear Cuenta
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creando cuenta...
+                </>
+              ) : (
+                "Crear Cuenta"
+              )}
             </Button>
           </form>
 
@@ -168,7 +396,8 @@ const handleSubmit = async (e) => {
               ¿Ya tienes cuenta?{" "}
               <button
                 onClick={onSwitchToLogin}
-                className="text-purple-400 hover:text-purple-300 font-medium underline transition-colors"
+                className="text-purple-400 hover:text-purple-300 font-medium underline transition-colors disabled:opacity-50"
+                disabled={isSubmitting}
               >
                 Inicia sesión aquí
               </button>
